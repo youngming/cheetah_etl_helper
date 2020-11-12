@@ -1,14 +1,8 @@
 import jnius_config
-import os
 import logging
-
-parser_classpath = os.getenv('SQLPARSERCP')
-parser_runtime = os.getenv('SQLPARSERRT')
-if(parser_classpath == None or parser_runtime == None):
-    logging.error('Missed two environment parameter SQLPARSERCP and SSQLPARSERRT')
-    raise Exception
-
-jnius_config.set_classpath(parser_classpath,parser_runtime)
+import os
+file_abs_path = os.path.dirname(os.path.abspath(__file__))
+jnius_config.set_classpath(file_abs_path + '/grammar/sql-grammar.jar',file_abs_path + '/grammar/antlr-3.5.2-complete.jar')
 import jnius
 from enum import Enum
 from functools import reduce
