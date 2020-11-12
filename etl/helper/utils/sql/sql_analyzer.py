@@ -1,5 +1,14 @@
 import jnius_config
-jnius_config.set_classpath('/home/sam/works/cheetah_etl_helper/etl/helper/utils/sql/grammar/sql-grammar.jar','/home/sam/works/cheetah_etl_helper/etl/helper/utils/sql/grammar/antlr-3.5.2-complete.jar')
+import os
+import logging
+
+parser_classpath = os.getenv('SQLPARSERCP')
+parser_runtime = os.getenv('SQLPARSERRT')
+if(parser_classpath == None or parser_runtime == None):
+    logging.error('Missed two environment parameter SQLPARSERCP and SSQLPARSERRT')
+    raise Exception
+
+jnius_config.set_classpath(parser_classpath,parser_runtime)
 import jnius
 from enum import Enum
 from functools import reduce
