@@ -1,5 +1,5 @@
 import jnius_config
-jnius_config.set_classpath('/home/sam/works/cheetah_framework/cfw/utils/etl/','/home/sam/works/cheetah_framework/cfw/utils/etl/grammar/antlr-3.5.2-complete.jar')
+jnius_config.set_classpath('/home/sam/works/cheetah_etl_helper/etl/helper/utils/sql/grammar/sql-grammar.jar','/home/sam/works/cheetah_etl_helper/etl/helper/utils/sql/grammar/antlr-3.5.2-complete.jar')
 import jnius
 from enum import Enum
 from functools import reduce
