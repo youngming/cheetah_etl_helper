@@ -1,9 +1,19 @@
-from etl.helper.module.properties import Layer
 from etl.helper.utils.common.file_operation import read_txt
 from etl.helper.utils.sql.sql_analyzer import TableType, analysis
 from functools import reduce
+from enum import Enum
 import logging
 import re
+
+class Layer(Enum):
+    STG=100
+    ODH=200
+    ODS=300
+    DWD=400
+    DWS=500
+    DM=600
+    ADS=700
+    UNKNOW=10000
 
 
 # All HQL element base class

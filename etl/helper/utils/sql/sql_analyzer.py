@@ -46,14 +46,13 @@ def __find_table_name(node_inputed, type_inputed = None, temporary_inputed = Fal
             yield (type, table_name_nodes[0].getText(), is_temporary)
         else:
             yield (type, reduce(lambda t1, t2: t1.getText() + '.' + t2.getText(), table_name_nodes), is_temporary)
-        return
+        
     else:
         child_nodes = node_inputed.children
         if(child_nodes != None):
             for child_node in child_nodes:
                 yield from __find_table_name(child_node, type, is_temporary)
-        else:
-            return
+            
 
 #def __test():
     # cstream = StringStream("select * from new_tqable;")
