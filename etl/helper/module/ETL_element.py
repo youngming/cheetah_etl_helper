@@ -17,12 +17,20 @@ class Layer(Enum):
 
 
 # All HQL element base class
-class SQLBase(object):
-    pass
+class ElementBase(object):
+    
+    def __hash__(self):
+        return self.path.__hash__()
+
+    def __eq__(self, other):
+        if(isinstance(other, ElementBase)):
+            return self.path == other.path
+        else:
+            return False
 
 
 # HQL element which can get all info from file name (STG)
-class FileElement(SQLBase):
+class FileElement(ElementBase):
     
     def __get_layer(self):
         return Layer[self.__path.split('/')[-3].upper()]
@@ -106,6 +114,10 @@ class FileElement(SQLBase):
             self.path, 
             self.input, 
             self.output)
+    
+    __repr__ = __str__
+        
+
 
 
 # HQL element which should be parse the input/output from HQL file (ODH/ODS/DWD/DWS/DM/ADS)
@@ -155,3 +167,21 @@ if __name__ == '__main__' :
     print(sqlEle.get_sentences(remove_set_segment=False))
     print(sqlEle.input)
     print(sqlEle.output)
+
+    fileEle2 = FileElement('/home/sam/works/cheetah_etl/src/stg/ops/[mdm].[hap_prd].[hmdm_md_attr_10002].sql')
+
+    fileEle_list = [fileEle, fileEle2]
+    print('fileEle_list')
+    print(fileEle_list)
+
+    fileEle_set = set()
+    fileEle_set.add(fileEle)
+    fileEle_set.add(fileEle2)
+    print('fileEle_set')
+    print(fileEle_set)
+
+    fileEle_dict = {}
+    fileEle_dict[fileEle] = fileEle
+    fileEle_dict[fileEle2] = fileEle
+    print('fileEle_dict')
+    print(fileEle_dict)
