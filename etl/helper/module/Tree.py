@@ -11,10 +11,10 @@ class TreeNode(object):
         self.__downstream = set()
 
     def upstream_listener_callback(self, tree_node_inputed):
-        self.append_upstream(tree_node_inputed)
+        self.append_downstream(tree_node_inputed)
 
     def downstream_listener_callback(self, tree_node_inputed):
-        self.append_downstream(tree_node_inputed)
+        self.append_upstream(tree_node_inputed)
 
     @property
     def element(self):
@@ -95,6 +95,8 @@ class Tree(object):
         self.__nodes[tree_node.element.path] = tree_node
 
         #Publish the append tree node's input / output into board (key=element path / value=append tree node)
+        #Set the own upstream / downstream when input output wish list existed
+        #Refresh all input / output wish list
         for output_item in tree_node.element.output:
             if(output_item not in self._instance.__output):
                 self._instance.__output[output_item] = set()
@@ -103,7 +105,7 @@ class Tree(object):
             if(output_item in self._instance.__input):
                 tree_node.append_downstream(self._instance.__input[output_item])
                 for input_wait in self._instance.__input[output_item]:
-                    input_wait.upstream_listener_callback(tree_node)
+                    input_wait.downstream_listener_callback(tree_node)
             
 
 
@@ -115,41 +117,60 @@ class Tree(object):
             if(input_item in self._instance.__output):
                 tree_node.append_upstream(self._instance.__output[input_item])
                 for output_wait in self._instance.__output[input_item]:
-                    output_wait.downstream_listener_callback(tree_node)
+                    output_wait.upstream_listener_callback(tree_node)
         
-        #Match the append tree node's input requirement. 
-        #Inject the related input tree node into when matched then put in input listener list
-        #(output can be contributed from more than one. Sometime the next one be added in the future)
-            
             
         
 
 if __name__ == '__main__':
+    # tree = Tree()
+    # tree2 = Tree()
+    # tree3 = Tree()
+    # print(tree.nodes)
+    # fileEle = FileElement('/home/sam/works/cheetah_etl/src/stg/ops/[mdm].[hap_prd].[hmdm_md_attr_10002].sql')
+    # sqlEle = SQLElement('/home/sam/works/cheetah_etl/src/ods/ops/sap_ep1_ztsd_051.hql')
+    # tree_node_file = TreeNode(fileEle)
+    # tree_node_sql = TreeNode(sqlEle)
+    # # tree_node_file.append_upstream(tree_node_sql)
+    # # tree_node_file.append_downstream(tree_node_sql)
+    # tree4 = Tree(tree_node_file)
+    # tree5 = Tree(tree_node_sql)
+    # print(tree5.nodes)
+    # print(tree.nodes)
+    # print(tree4.nodes)
+    # print(tree4.nodes['/home/sam/works/cheetah_etl/src/stg/ops/[mdm].[hap_prd].[hmdm_md_attr_10002].sql'].upstream)
+    # print(tree4.nodes['/home/sam/works/cheetah_etl/src/stg/ops/[mdm].[hap_prd].[hmdm_md_attr_10002].sql'].downstream)
+
+
+
+    # print(tree)
+    # print(tree2)
+    # print(tree3)
+    # print(tree4)
+    # print(tree5)
+
+    node_dws_fct_ass_hourly_di = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/dws/ops/fct_ass_hourly_di.hql'))
+    node_dwd_fct_ass_ord_item_id = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/dwd/ops/fct_ass_ord_item_di.hql'))
+    node_dwd_dim_hour = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/dwd/ops/dim_hour.hql'))
+    node_dwd_fct_ass_paytype_ord_di = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/dwd/ops/fct_ass_paytype_ord_di.hql'))
+
     tree = Tree()
-    tree2 = Tree()
-    tree3 = Tree()
-    print(tree.nodes)
-    fileEle = FileElement('/home/sam/works/cheetah_etl/src/stg/ops/[mdm].[hap_prd].[hmdm_md_attr_10002].sql')
-    sqlEle = SQLElement('/home/sam/works/cheetah_etl/src/ods/ops/sap_ep1_ztsd_051.hql')
-    tree_node_file = TreeNode(fileEle)
-    tree_node_sql = TreeNode(sqlEle)
-    # tree_node_file.append_upstream(tree_node_sql)
-    # tree_node_file.append_downstream(tree_node_sql)
-    tree4 = Tree(tree_node_file)
-    tree5 = Tree(tree_node_sql)
-    print(tree5.nodes)
-    print(tree.nodes)
-    print(tree4.nodes)
-    print(tree4.nodes['/home/sam/works/cheetah_etl/src/stg/ops/[mdm].[hap_prd].[hmdm_md_attr_10002].sql'].upstream)
-    print(tree4.nodes['/home/sam/works/cheetah_etl/src/stg/ops/[mdm].[hap_prd].[hmdm_md_attr_10002].sql'].downstream)
+    tree.append_node(node_dwd_dim_hour)
+    tree.append_node(node_dwd_fct_ass_ord_item_id)
+    tree.append_node(node_dwd_fct_ass_paytype_ord_di)
+    tree.append_node(node_dws_fct_ass_hourly_di)
 
+    print(node_dws_fct_ass_hourly_di.element.input)
+    print(node_dws_fct_ass_hourly_di.element.output)
 
+    print(node_dwd_fct_ass_ord_item_id.element.input)
+    print(node_dwd_fct_ass_ord_item_id.element.output)
 
-    print(tree)
-    print(tree2)
-    print(tree3)
-    print(tree4)
-    print(tree5)
+    print(node_dwd_dim_hour.element.input)
+    print(node_dwd_dim_hour.element.output)
+
+    print(node_dwd_fct_ass_paytype_ord_di.element.input)
+    print(node_dwd_fct_ass_paytype_ord_di.element.output)
     
 
 

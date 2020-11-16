@@ -15,6 +15,8 @@ class Layer(Enum):
     ADS=700
     UNKNOW=10000
 
+class TargetTableException(Exception):
+    pass
 
 # All HQL element base class
 class ElementBase(object):
@@ -143,14 +145,18 @@ class SQLElement(FileElement):
                 result[TableType.INPUT].add(input)
             for output in output_table_name_list :
                 result[TableType.OUTPUT].add(output)
+        
+        if(self.layer.name + '.' + self.name.upper() not in result[TableType.OUTPUT]):
+            #raise TargetTableException('Table name {} should be included in output list', self.layer.name + '.' + self.name.upper())
+            logging.error('Table name {} should be included in output list. SQL path is {}'.format(self.layer.name + '.' + self.name.upper(), self.path))
         return result
 
     def __get_name(self):
         return self.path.split('/')[-1].replace('.hql', '')
 
     def __fill(self):        
-        meta_data = self.__get_meta_info()
         self.__name = self.__get_name()
+        meta_data = self.__get_meta_info()
         self.__input = tuple(meta_data[TableType.INPUT])
         self.__output = tuple(meta_data[TableType.OUTPUT])
 
