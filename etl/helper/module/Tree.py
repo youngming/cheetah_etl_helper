@@ -13,8 +13,8 @@ class TreeNode(object):
     def upstream_listener_callback(self, tree_node_inputed):
         self.append_upstream(tree_node_inputed)
 
-    def downstream_listener_callback(self, tree_node_innputed):
-        self.append_downstream(tree_node_innputed)
+    def downstream_listener_callback(self, tree_node_inputed):
+        self.append_downstream(tree_node_inputed)
 
     @property
     def element(self):
@@ -32,6 +32,8 @@ class TreeNode(object):
         if(isinstance(tree_node, TreeNode)):
             tree_node_set = set()
             tree_node_set.add(tree_node)
+        else:
+            tree_node_set = tree_node
         
         for tree_node_item in tree_node_set:
             if(self.__element != tree_node_item.element):
@@ -41,10 +43,20 @@ class TreeNode(object):
         if(isinstance(tree_node, TreeNode)):
             tree_node_set = set()
             tree_node_set.add(tree_node)
+        else:
+            tree_node_set = tree_node
 
         for tree_node_item in tree_node_set:
-            if(self.__element != tree_node.element):
-                self.__downstream.add(tree_node)
+            if(self.__element != tree_node_item.element):
+                self.__downstream.add(tree_node_item)
+
+    @property
+    def upstream(self):
+        return self.__upstream
+
+    @property
+    def downstream(self):
+        return self.__downstream
 
     def __hash__(self):
         return self.__element.__hash__()
@@ -68,8 +80,7 @@ class Tree(object):
                     Tree._instance = object.__new__(cls)
                     Tree._instance.__nodes = {}
                     Tree._instance.__output = {}
-                    # Tree._instance.__input = {}
-                    Tree._instance.__input_listener = {}  
+                    Tree._instance.__input = {}
         return Tree._instance
 
     @property
@@ -83,20 +94,34 @@ class Tree(object):
                 
         self.__nodes[tree_node.element.path] = tree_node
 
-        #Publish the append tree node's output into board (key=element path / value=append tree node)
+        #Publish the append tree node's input / output into board (key=element path / value=append tree node)
         for output_item in tree_node.element.output:
             if(output_item not in self._instance.__output):
                 self._instance.__output[output_item] = set()
             self._instance.__output[output_item].add(tree_node)
+
+            if(output_item in self._instance.__input):
+                tree_node.append_downstream(self._instance.__input[output_item])
+                for input_wait in self._instance.__input[output_item]:
+                    input_wait.upstream_listener_callback(tree_node)
+            
+
+
+        for input_item in tree_node.element.input:
+            if(input_item not in self._instance.__input):
+                self._instance.__input[input_item] = set()
+            self._instance.__input[input_item].add(tree_node)
+
+            if(input_item in self._instance.__output):
+                tree_node.append_upstream(self._instance.__output[input_item])
+                for output_wait in self._instance.__output[input_item]:
+                    output_wait.downstream_listener_callback(tree_node)
         
         #Match the append tree node's input requirement. 
         #Inject the related input tree node into when matched then put in input listener list
         #(output can be contributed from more than one. Sometime the next one be added in the future)
-        for input_item in tree_node.element.input:
-            if(input_item in self._instance.__output):
-                tree_node.append_upstream(self._instance.__output[input_item])
-            # else:
-
+            
+            
         
 
 if __name__ == '__main__':
@@ -108,10 +133,10 @@ if __name__ == '__main__':
     sqlEle = SQLElement('/home/sam/works/cheetah_etl/src/ods/ops/sap_ep1_ztsd_051.hql')
     tree_node_file = TreeNode(fileEle)
     tree_node_sql = TreeNode(sqlEle)
-    tree_node_file.append_upstream(tree_node_sql)
-    tree_node_file.append_downstream(tree_node_sql)
+    # tree_node_file.append_upstream(tree_node_sql)
+    # tree_node_file.append_downstream(tree_node_sql)
     tree4 = Tree(tree_node_file)
-    tree5 = Tree()
+    tree5 = Tree(tree_node_sql)
     print(tree5.nodes)
     print(tree.nodes)
     print(tree4.nodes)

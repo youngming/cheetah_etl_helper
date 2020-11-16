@@ -34,6 +34,9 @@ class FileElement(ElementBase):
     
     def __get_layer(self):
         return Layer[self.__path.split('/')[-3].upper()]
+
+    def __get_name(self):
+        return self.__path.split('/')[-1].replace('.sql', '')
     
     def __parse_sql_header(self):
         header_list = re.findall(r'--.*?=.*?\n', self.__sql_text)
@@ -75,6 +78,7 @@ class FileElement(ElementBase):
         self.__sql_text = read_txt(self.__path)
         self.__layer = self.__get_layer()
         self.__header = self.__parse_sql_header()
+        self.__name = self.__get_name()
 
     def __init__(self, path):
         self.__path = path
@@ -83,6 +87,10 @@ class FileElement(ElementBase):
     @property
     def path(self):
         return self.__path
+
+    @property
+    def name(self):
+        return self.__name
 
     @property
     def layer(self):
@@ -108,9 +116,10 @@ class FileElement(ElementBase):
 
     def __str__(self):
         return str.format(
-            'header:{} | layer:{} | path:{} | input:{} | output:{}', 
+            'header:{} | layer:{} | name:{} | path:{} | input:{} | output:{}', 
             self.header, 
             self.layer, 
+            self.name,
             self.path, 
             self.input, 
             self.output)
@@ -136,8 +145,12 @@ class SQLElement(FileElement):
                 result[TableType.OUTPUT].add(output)
         return result
 
+    def __get_name(self):
+        return self.path.split('/')[-1].replace('.hql', '')
+
     def __fill(self):        
         meta_data = self.__get_meta_info()
+        self.__name = self.__get_name()
         self.__input = tuple(meta_data[TableType.INPUT])
         self.__output = tuple(meta_data[TableType.OUTPUT])
 
@@ -145,6 +158,10 @@ class SQLElement(FileElement):
         FileElement.__init__(self, path)
         self.__fill()
     
+    @property
+    def name(self):
+        return self.__name
+
     @property
     def input(self):
         return self.__input
