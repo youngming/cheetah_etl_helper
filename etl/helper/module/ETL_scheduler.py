@@ -26,10 +26,9 @@ class ETLScheduler(object):
 if __name__ == '__main__':
     scheduler = ETLScheduler(os.getenv('ETL_HOME'))
     all_nodes_list = scheduler.get_nodes()
-    for i in all_nodes_list:
-        Tree(TreeNode(i))
-
     tree = Tree()
+    for i in all_nodes_list:
+        tree.append_node(TreeNode(i))
 
     print(tree)
 

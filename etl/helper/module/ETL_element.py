@@ -147,8 +147,8 @@ class SQLElement(FileElement):
                 result[TableType.OUTPUT].add(output)
         
         if(self.layer.name + '.' + self.name.upper() not in result[TableType.OUTPUT]):
-            #raise TargetTableException('Table name {} should be included in output list', self.layer.name + '.' + self.name.upper())
-            logging.error('Table name {} should be included in output list. SQL path is {}'.format(self.layer.name + '.' + self.name.upper(), self.path))
+            raise TargetTableException('Table name {} should be included in output list. SQL path is {}'.format(self.layer.name + '.' + self.name.upper(), self.path))
+            #logging.error('Table name {} should be included in output list. SQL path is {}'.format(self.layer.name + '.' + self.name.upper(), self.path))
         return result
 
     def __get_name(self):
