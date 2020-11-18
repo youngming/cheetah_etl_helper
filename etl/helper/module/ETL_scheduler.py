@@ -1,4 +1,4 @@
-from etl.helper.utils.common.file_operation import search_files_in_folder, delete_folders
+from etl.helper.utils.common.file_operation import search_files_in_folder, delete_folders, delete_file
 from etl.helper.module.ETL_element import FileElement, SQLElement
 from etl.helper.module.Tree import TreeNode, Tree
 import os
@@ -53,7 +53,7 @@ class ETLScheduler(object):
         if(self.tree == None):
             self.tree = self.__get_nodes()
         
-        self.__generate_output_with_part_info(self.tree)
+        self.__generate_output_with_part_info(self.tree, delete_before_generate=False)
         self.__generate_output_with_full_info(self.tree)
 
     #Generate output with only requried info and save them split files into different folder
@@ -71,8 +71,9 @@ class ETLScheduler(object):
 
     #Generate output with all of the info and save them into one file
     def __generate_output_with_full_info(self, tree, delete_before_generate=True):
-        # full_content = yaml.dump(tree.nodes)
-        # print(full_content)
+        file_path = self.__etl_home + '/full_info.yml'
+        if(delete_before_generate):
+            delete_file(file_path)
         pass
 
     def scan_and_check(self):
@@ -80,7 +81,7 @@ class ETLScheduler(object):
             self.tree = self.__get_nodes()
         
         depth_exception_info = self.tree.check_depth()
-        if(depth_exception_info != None and len(depth_exception_info) != 0):
+        if(depth_exception_info != None and len(depth_exception_info) > 0):
             logging.error('These reference are exceeded limit {}'.format(depth_exception_info))
             raise LayerReferenceDepthLimitationException(depth_exception_info)
 

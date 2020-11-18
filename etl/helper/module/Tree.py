@@ -147,14 +147,18 @@ class Tree(object):
                 for downstream_node in current_node.downstream:
                     yield from self.__check_depth_process(downstream_node, limitation, current_node.element.layer, current_count, through_path)
 
-    def check_depth(self):
-        if(self.__depth_limit == None or self.__depth_limit < 0):
+    def check_depth(self, depth_limit = None):
+        depth_limit_final = depth_limit    
+        if((self.__depth_limit == None or self.__depth_limit < 0) and (depth_limit == None or depth_limit < 0)):
             logging.info('There is no depth limitation requirement inputed')
             return
 
+        if(depth_limit_final == None):
+            depth_limit_final = self.__depth_limit
+
         tmp_list = []
         for path, node in self.nodes.items():
-            tmp_list.extend(list(self.__check_depth_process(node, self.__depth_limit)))
+            tmp_list.extend(list(self.__check_depth_process(node, depth_limit_final)))
 
         result = set()
         for i in tmp_list:
