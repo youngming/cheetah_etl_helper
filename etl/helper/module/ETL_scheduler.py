@@ -10,7 +10,7 @@ class ArgumentMissingException(Exception):
     pass
 
 #Throw this exception when same layer reference exceeded the limit
-class LayerReferenceDepthLimitationException(Exception)::
+class LayerReferenceDepthLimitationException(Exception):
     pass
 
 class ETLScheduler(object):
@@ -18,6 +18,7 @@ class ETLScheduler(object):
     def __init__(self, etl_home=None, depth_limit=None):
         self.__etl_home = etl_home
         self.__depth_limit = depth_limit
+        self.tree = None
 
         if(self.__etl_home == None):
             self.__etl_home = os.getenv('ETL_HOME')
@@ -41,22 +42,36 @@ class ETLScheduler(object):
         
         tree = Tree(depth_limit_same_layer=self.__depth_limit)
         for node in all_sql_element:
-            tree.append_node(TreeNode(node)
-        self.__tree = tree
-
+            tree.append_node(TreeNode(node))
+        
+        self.tree = tree
         return tree
 
+
     def generate_output_files(self):
-        if(self.__tree == None):
-            self.__tree = self.__get_nodes()
+        if(self.tree == None):
+            self.tree = self.__get_nodes()
+        
+        for path, node in self.tree.nodes.items():
+            print(path)
+            print(node.element.show_name)
+            for child in node.downstream:
+                print(child.element.path)
+                print(child.element.show_name)
+
+    def __generate_output_with_part_info():
+        pass
+
+    def __generate_output_with_full_info():
+        pass
 
     def check_depth(self):
-        if(self.__tree == None):
-            self.__tree = self.__get_nodes()
+        if(self.tree == None):
+            self.tree = self.__get_nodes()
         
-        depth_exception_info = self.__tree.check_depth()
-        if(depth_exception_infolen != None and depth_exception_infolen(depth_exception_info) != 0):
-            logging.error('These reference is exceeded limit {}'.format(depth_exception_info))
+        depth_exception_info = self.tree.check_depth()
+        if(depth_exception_info != None and len(depth_exception_info) != 0):
+            logging.error('These reference are exceeded limit {}'.format(depth_exception_info))
             raise LayerReferenceDepthLimitationException(depth_exception_info)
 
 
@@ -64,7 +79,9 @@ class ETLScheduler(object):
 if __name__ == '__main__':
     
 
-
+    etl_scheduler = ETLScheduler(depth_limit=1)
+    etl_scheduler.check_depth()
+    etl_scheduler.generate_output_files()
     # for path, node in tree.nodes.items():
     #     if(node.element.layer == None): 
     #         print(node.element)
