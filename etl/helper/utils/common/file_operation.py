@@ -8,13 +8,6 @@ def read_txt(file_path):
         txt = ''.join(ls_item)
         return txt
 
-def test(home_folder):
-    for current_folder, child_folder, file_name_list in os.walk(home_folder): 
-        print(current_folder)
-        print(child_folder)
-        #print(file_name_list)
-        print('=======================')
-
 def search_files_in_folder(home_folder, target_folder = None, target_file_type = None):
     for current_folder, child_folder, file_name_list in os.walk(home_folder): 
         if ((target_folder != None and (current_folder.split('/')[-1] == target_folder)) or (target_folder == None)):
@@ -28,11 +21,11 @@ def search_files_in_folder(home_folder, target_folder = None, target_file_type =
         #     for child in child_folder:
         #         yield from search_files_in_folder(child, target_folder, target_file_type)
 
-def delete_folders(home_folder, target_folder):
+def delete_files_in_folders(home_folder, target_folder):
     for current_folder, child_folder, file_name_list in os.walk(home_folder): 
         if (target_folder != None and (current_folder.split('/')[-1] == target_folder)):
             shutil.rmtree(current_folder)
-            return
+            os.mkdir(current_folder)
         #fetch next layer folder
         # elif (len(child_folder) > 0):
         #     for child in child_folder:
@@ -45,8 +38,6 @@ def delete_file(path):
         os.remove(path)
 
 if __name__ == '__main__':
-    files = [x for x in search_files_in_folder('/home/sam/works/cheetah_etl/src')]
-    # delete_folders('/home/sam/works/cheetah_etl', 'yml')
-    print(files)
-
-    # test('/home/sam/works/cheetah_etl/src')
+    # files = [x for x in search_files_in_folder('/home/sam/works/cheetah_etl/src', target_folder='ops')]
+    delete_files_in_folders('/home/sam/works/cheetah_etl', 'yml')
+    # print(files)

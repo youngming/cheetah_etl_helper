@@ -1,4 +1,4 @@
-from etl.helper.utils.common.file_operation import search_files_in_folder, delete_folders, delete_file
+from etl.helper.utils.common.file_operation import search_files_in_folder, delete_files_in_folders, delete_file
 from etl.helper.module.ETL_element import FileElement, SQLElement
 from etl.helper.module.Tree import TreeNode, Tree
 import os
@@ -48,25 +48,18 @@ class ETLScheduler(object):
         self.tree = tree
         return tree
 
-
-    def generate_output_files(self):
-        if(self.tree == None):
-            self.tree = self.__get_nodes()
-        
-        self.__generate_output_with_part_info(self.tree, delete_before_generate=False)
-        self.__generate_output_with_full_info(self.tree)
-
     #Generate output with only requried info and save them split files into different folder
     def __generate_output_with_part_info(self, tree, delete_before_generate=True):
         if(delete_before_generate):
-            delete_folders(self.__etl_home, 'yml')
+            delete_files_in_folders(self.__etl_home, 'yml')
+            
         for path, node in tree.nodes.items():
             if(len(node.upstream) > 0):
                 file_path = '/'.join(path.split('/')[0:-2]) + '/yml'
                 file_name = node.element.name + '.yml'
                 yaml_file = file_path + '/' + file_name
                 file_content = [up.element.output_name.lower() for up in node.upstream]
-                with open(yaml_file , 'w') as yaml_writer:
+                with open(yaml_file , 'w+') as yaml_writer:
                     yaml.dump(file_content, yaml_writer)
 
     #Generate output with all of the info and save them into one file
@@ -75,6 +68,13 @@ class ETLScheduler(object):
         if(delete_before_generate):
             delete_file(file_path)
         pass
+
+    def generate_output_files(self):
+        if(self.tree == None):
+            self.tree = self.__get_nodes()
+        
+        self.__generate_output_with_part_info(self.tree)
+        self.__generate_output_with_full_info(self.tree)
 
     def scan_and_check(self):
         if(self.tree == None):
@@ -90,7 +90,7 @@ class ETLScheduler(object):
 if __name__ == '__main__':
     
 
-    etl_scheduler = ETLScheduler(depth_limit=1)
+    etl_scheduler = ETLScheduler(etl_home='/home/sam/cheetah_etl' ,depth_limit=1)
     etl_scheduler.scan_and_check()
     etl_scheduler.generate_output_files()
     # for path, node in tree.nodes.items():
