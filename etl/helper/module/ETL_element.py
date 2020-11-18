@@ -5,6 +5,10 @@ from enum import Enum
 import logging
 import re
 
+#Throw this exception when target table wrote in SQL file unmatched file name
+class TargetTableException(Exception):
+    pass
+
 class Layer(Enum):
     STG=100
     ODH=200
@@ -14,9 +18,6 @@ class Layer(Enum):
     DM=600
     ADS=700
     UNKNOW=10000
-
-class TargetTableException(Exception):
-    pass
 
 # All HQL element base class
 class ElementBase(object):
@@ -95,6 +96,10 @@ class FileElement(ElementBase):
         return self.__name
 
     @property
+    def show_name(self):
+        return self.layer.name + '.' + self.name
+        
+    @property
     def layer(self):
         return self.__layer
 
@@ -118,10 +123,11 @@ class FileElement(ElementBase):
 
     def __str__(self):
         return str.format(
-            'header:{} | layer:{} | name:{} | path:{} | input:{} | output:{}', 
+            'header:{} | layer:{} | name:{} | show_name:{} | path:{} | input:{} | output:{}', 
             self.header, 
             self.layer, 
             self.name,
+            self.show_name,
             self.path, 
             self.input, 
             self.output)
@@ -147,8 +153,8 @@ class SQLElement(FileElement):
                 result[TableType.OUTPUT].add(output)
         
         if(self.layer.name + '.' + self.name.upper() not in result[TableType.OUTPUT]):
+            logging.error('Table name and file name unmatched')
             raise TargetTableException('Table name {} should be included in output list. SQL path is {}'.format(self.layer.name + '.' + self.name.upper(), self.path))
-            #logging.error('Table name {} should be included in output list. SQL path is {}'.format(self.layer.name + '.' + self.name.upper(), self.path))
         return result
 
     def __get_name(self):

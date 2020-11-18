@@ -1,6 +1,8 @@
 from etl.helper.module.ETL_element import ElementBase, FileElement, SQLElement
 import threading
+import logging
 
+#Throw this exception when same tree node be inputed into tree more than once
 class TreeNodeDuplicateException(Exception):
     pass
 
@@ -69,7 +71,7 @@ class Tree(object):
 
     _instance_lock = threading.Lock()
 
-    def __init__(self, tree_node = None):
+    def __init__(self, tree_node = None, depth_limit_same_layer = None):
         if tree_node:
             self.append_node(tree_node)
 
@@ -81,6 +83,7 @@ class Tree(object):
                     Tree._instance.__nodes = {}
                     Tree._instance.__output = {}
                     Tree._instance.__input = {}
+                    Tree._instance.__depth_limit = kwargs.get('depth_limit_same_layer', None)
         return Tree._instance
 
     @property
@@ -118,9 +121,46 @@ class Tree(object):
                 tree_node.append_upstream(self._instance.__output[input_item])
                 for output_wait in self._instance.__output[input_item]:
                     output_wait.upstream_listener_callback(tree_node)
-        
-            
-        
+
+    def __check_depth_process(self, current_node, limitation, current_layer=None, current_count=0, through_path=[]):
+        if(current_layer == None and len(through_path) == 0):
+            if(len(current_node.downstream) >0):
+                current_layer = current_node.element.layer
+                through_path.append(current_node.element.show_name)
+                for downstream_node in current_node.downstream:
+                    yield from self.__check_depth_process(downstream_node, limitation, current_node.element.layer, current_count, through_path)
+        else:
+            if(current_node.element.layer == current_layer):
+                current_count += 1
+                through_path.append(current_node.element.show_name)
+                if(current_count > limitation):
+                    yield '->'.join(through_path)
+                    through_path.pop()
+                elif (len(current_node.downstream) >0):
+                    for downstream_node in current_node.downstream:
+                        yield from self.__check_depth_process(downstream_node, limitation, current_node.element.layer, current_count, through_path)
+            elif(len(current_node.downstream) > 0):
+                current_layer = current_node.element.layer
+                current_count = 0
+                through_path = []
+                through_path.append(current_node.element.show_name)
+                for downstream_node in current_node.downstream:
+                    yield from self.__check_depth_process(downstream_node, limitation, current_node.element.layer, current_count, through_path)
+
+    def check_depth(self):
+        if(self.__depth_limit == None or self.__depth_limit < 0):
+            logging.info('There is no depth limitation requirement inputed')
+            return
+
+        tmp_list = []
+        for path, node in self.nodes.items():
+            tmp_list.extend(list(self.__check_depth_process(node, self.__depth_limit)))
+
+        result = set()
+        for i in tmp_list:
+            result.add(i)
+
+        return result        
 
 if __name__ == '__main__':
     # tree = Tree()
@@ -153,24 +193,56 @@ if __name__ == '__main__':
     node_dwd_fct_ass_ord_item_id = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/dwd/ops/fct_ass_ord_item_di.hql'))
     node_dwd_dim_hour = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/dwd/ops/dim_hour.hql'))
     node_dwd_fct_ass_paytype_ord_di = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/dwd/ops/fct_ass_paytype_ord_di.hql'))
-
-    tree = Tree()
-    tree.append_node(node_dwd_dim_hour)
-    tree.append_node(node_dwd_fct_ass_ord_item_id)
-    tree.append_node(node_dwd_fct_ass_paytype_ord_di)
-    tree.append_node(node_dws_fct_ass_hourly_di)
-
-    print(node_dws_fct_ass_hourly_di.element.input)
-    print(node_dws_fct_ass_hourly_di.element.output)
-
-    print(node_dwd_fct_ass_ord_item_id.element.input)
-    print(node_dwd_fct_ass_ord_item_id.element.output)
-
-    print(node_dwd_dim_hour.element.input)
-    print(node_dwd_dim_hour.element.output)
-
-    print(node_dwd_fct_ass_paytype_ord_di.element.input)
-    print(node_dwd_fct_ass_paytype_ord_di.element.output)
+    node_dwd_dim_merchant = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/dwd/ops/dim_merchant.hql'))
+    node_ods_mlp_oms_so_return = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/ods/ops/mlp_oms_so_return.hql'))
     
+    node_dwd_dim_item = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/dwd/ops/dim_item.hql'))
+    node_dwd_fct_item_sourcing_df = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/dwd/ops/fct_itm_sourcing_df.hql'))
+    node_dwd_fct_item_price_df = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/dwd/ops/fct_item_price_df.hql'))
+    node_ods_mdm_hap_prd_hmdm_md_attr_10005 = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/ods/ops/mdm_hap_prd_hmdm_md_attr_10005.hql'))
+    
+    node_stg_biweb_aldi_board_cs_import_data = TreeNode(FileElement('/home/sam/works/cheetah_etl/src/stg/ops/[biweb].[aldi_board].[cs_import_data].sql'))
+    node_ods_biweb_aldi_board_cs_import_data = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/ods/ops/biweb_aldi_board_cs_import_data.hql'))
+    node_stg_impt_cheetah_calendar = TreeNode(FileElement('/home/sam/works/cheetah_etl/src/stg/ops/[impt].[cheetah].[calendar].sql'))
+    node_stg_impt_cheetah_holiday = TreeNode(FileElement('/home/sam/works/cheetah_etl/src/stg/ops/[impt].[cheetah].[holiday].sql'))
+    node_stg_impt_cheetah_impt_buying_m_d_mapping = TreeNode(FileElement('/home/sam/works/cheetah_etl/src/stg/ops/[impt].[cheetah].[impt_buying_m_d_mapping].sql'))
+    node_stg_impt_cheetah_impt_channel_m = TreeNode(FileElement('/home/sam/works/cheetah_etl/src/stg/ops/[impt].[cheetah].[impt_channel_m].sql'))
+
+
+
+    tree = Tree(depth_limit_same_layer=0)
+    # tree.append_node(node_dwd_dim_hour)
+    # tree.append_node(node_dwd_fct_ass_ord_item_id)
+    # tree.append_node(node_dwd_fct_ass_paytype_ord_di)
+    # tree.append_node(node_dws_fct_ass_hourly_di)
+    # tree.append_node(node_dim_merchant)
+    # tree.append_node(node_mlp_oms_so_return)
+
+    tree.append_node(node_dwd_dim_item)
+    tree.append_node(node_dwd_fct_item_sourcing_df)
+    tree.append_node(node_dwd_fct_item_price_df)
+    tree.append_node(node_ods_mdm_hap_prd_hmdm_md_attr_10005)
+
+    # tree.append_node(node_stg_biweb_aldi_board_cs_import_data)
+    # tree.append_node(node_ods_biweb_aldi_board_cs_import_data)
+    # tree.append_node(node_stg_impt_cheetah_calendar)
+    # tree.append_node(node_stg_impt_cheetah_holiday)
+    # tree.append_node(node_stg_impt_cheetah_impt_buying_m_d_mapping)
+    # tree.append_node(node_stg_impt_cheetah_impt_channel_m)
+
+    error = tree.check_depth()
+    print(error)
+    # print(node_dws_fct_ass_hourly_di.element.input)
+    # print(node_dws_fct_ass_hourly_di.element.output)
+
+    # print(node_dwd_fct_ass_ord_item_id.element.input)
+    # print(node_dwd_fct_ass_ord_item_id.element.output)
+
+    # print(node_dwd_dim_hour.element.input)
+    # print(node_dwd_dim_hour.element.output)
+
+    # print(node_dwd_fct_ass_paytype_ord_di.element.input)
+    # print(node_dwd_fct_ass_paytype_ord_di.element.output)
+     
 
 
