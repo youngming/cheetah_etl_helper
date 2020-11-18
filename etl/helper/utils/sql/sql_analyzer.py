@@ -1,5 +1,6 @@
 import jnius_config
 import logging
+#logging.getLogger().setLevel(logging.INFO)
 import os
 file_abs_path = os.path.dirname(os.path.abspath(__file__))
 jnius_config.set_classpath(file_abs_path + '/grammar/sql-grammar.jar',file_abs_path + '/grammar/antlr-3.5.2-complete.jar')
@@ -84,6 +85,7 @@ def __find_table_name(node_inputed, type_inputed = None, temporary_inputed = Fal
     #     print(t)
 
 def analysis(single_sql_sentence):
+    logging.info(single_sql_sentence)
     sql_string = single_sql_sentence.upper()
     sqlstream = StringStream(sql_string)
     inst = Lexer(sqlstream)
@@ -96,7 +98,8 @@ def analysis(single_sql_sentence):
 
 if __name__=='__main__':
     # __test()
-    sql_string = "CREATE TEMPORARY TABLE IF NOT EXISTS  tmp.dwd_aldi_msap09_so_item_tmp_base_all AS SELECT id,msap09_so_id,itemid FROM ods.mlp_finance_aldi_msap09_so_item WHERE pt_create_time IN (SELECT ods.pt_create_time FROM tmp.dwd_tmp_aldi_msap09_so_item_incr tmp JOIN ods.mlp_finance_aldi_msap09_so_item ods ON ods.id = tmp.id GROUP BY ods.pt_create_time)"
+    #sql_string = "CREATE TEMPORARY TABLE IF NOT EXISTS  tmp.dwd_aldi_msap09_so_item_tmp_base_all AS SELECT id,msap09_so_id,itemid FROM ods.mlp_finance_aldi_msap09_so_item WHERE pt_create_time IN (SELECT ods.pt_create_time FROM tmp.dwd_tmp_aldi_msap09_so_item_incr tmp JOIN ods.mlp_finance_aldi_msap09_so_item ods ON ods.id = tmp.id GROUP BY ods.pt_create_time)"
+    sql_string = "insert overwrite TABLE ods.pos_midplat_posm04_root PARTITION(pt_create_date) select pmp.id, b.number, b.retailstoreid, b.organizationhierarchy, b.workstationid, b.businessdaydate, b.begindatetime, b.enddatetime, b.operatorid, b.sequencenumber, b.currencycode, b.szretailstoreexternalid, b.szdate, b.type, b.szdocumentnmbr, from_unixtime(unix_timestamp(),'yyyy-MM-dd HH:mm:ss') AS etl_date, date(date_format(pmp.create_date,'yyyy-MM-dd HH:mm:ss')) AS pt_create_date from stg.pos_midplat_posm04 pmp lateral view json_tuple(pmp.trans_msg, 'number', 'RetailStoreID', 'OrganizationHierarchy', 'WorkstationID', 'BusinessDayDate', 'BeginDateTime', 'EndDateTime', 'OperatorID', 'SequenceNumber', 'CurrencyCode', 'szRetailStoreExternalID', 'szDate', 'Type', 'szDocumentNmbr' )b as number, retailstoreid, organizationhierarchy, workstationid, businessdaydate, begindatetime, enddatetime, operatorid, sequencenumber, currencycode, szretailstoreexternalid, szdate, type, szdocumentnmbr where dt='{{ dt }}'"
     result = analysis(sql_string)
     print(result)
 

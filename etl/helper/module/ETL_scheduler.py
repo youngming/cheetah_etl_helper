@@ -1,9 +1,10 @@
-from etl.helper.utils.common.file_operation import search_files_in_folder
+from etl.helper.utils.common.file_operation import search_files_in_folder, delete_folders
 from etl.helper.module.ETL_element import FileElement, SQLElement
 from etl.helper.module.Tree import TreeNode, Tree
 import os
 from functools import reduce
 import logging
+import yaml
 
 #Throw this exception when without ETL_HOME argument inputed
 class ArgumentMissingException(Exception):
@@ -52,20 +53,29 @@ class ETLScheduler(object):
         if(self.tree == None):
             self.tree = self.__get_nodes()
         
-        for path, node in self.tree.nodes.items():
-            print(path)
-            print(node.element.show_name)
-            for child in node.downstream:
-                print(child.element.path)
-                print(child.element.show_name)
+        self.__generate_output_with_part_info(self.tree)
+        self.__generate_output_with_full_info(self.tree)
 
-    def __generate_output_with_part_info():
+    #Generate output with only requried info and save them split files into different folder
+    def __generate_output_with_part_info(self, tree, delete_before_generate=True):
+        if(delete_before_generate):
+            delete_folders(self.__etl_home, 'yml')
+        for path, node in tree.nodes.items():
+            if(len(node.upstream) > 0):
+                file_path = '/'.join(path.split('/')[0:-2]) + '/yml'
+                file_name = node.element.name + '.yml'
+                yaml_file = file_path + '/' + file_name
+                file_content = [up.element.output_name.lower() for up in node.upstream]
+                with open(yaml_file , 'w') as yaml_writer:
+                    yaml.dump(file_content, yaml_writer)
+
+    #Generate output with all of the info and save them into one file
+    def __generate_output_with_full_info(self, tree, delete_before_generate=True):
+        # full_content = yaml.dump(tree.nodes)
+        # print(full_content)
         pass
 
-    def __generate_output_with_full_info():
-        pass
-
-    def check_depth(self):
+    def scan_and_check(self):
         if(self.tree == None):
             self.tree = self.__get_nodes()
         
@@ -80,7 +90,7 @@ if __name__ == '__main__':
     
 
     etl_scheduler = ETLScheduler(depth_limit=1)
-    etl_scheduler.check_depth()
+    etl_scheduler.scan_and_check()
     etl_scheduler.generate_output_files()
     # for path, node in tree.nodes.items():
     #     if(node.element.layer == None): 

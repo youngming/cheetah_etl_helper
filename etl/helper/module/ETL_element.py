@@ -41,6 +41,12 @@ class FileElement(ElementBase):
     def __get_name(self):
         return self.__path.split('/')[-1].replace('.sql', '')
     
+    def __get_output_name(self):
+        file_name = self.__path.split('/')[-1].upper()
+        table_segments = file_name.replace('[', '').replace(']', '').strip().split('.')[0:-1]
+        output_table = str(self.layer.name + '.' + reduce(lambda tp1, tp2: tp1 + '_' + tp2, table_segments))
+        return output_table
+    
     def __parse_sql_header(self):
         header_list = re.findall(r'--.*?=.*?\n', self.__sql_text)
         header_list = list(map(lambda head_item : re.sub(r'--', '', head_item).strip(), header_list))
@@ -50,10 +56,7 @@ class FileElement(ElementBase):
         return result
     
     def __get_output(self):
-        file_name = self.__path.split('/')[-1].upper()
-        table_segments = file_name.replace('[', '').replace(']', '').strip().split('.')[0:-1]
-        output_table = str(self.layer.name + '.' + reduce(lambda tp1, tp2: tp1 + '_' + tp2, table_segments))
-        return (output_table,)
+        return (self.__get_output_name(),)
 
     def get_sentences(self, remove_set_segment = False):
         #remove sql header
@@ -82,6 +85,7 @@ class FileElement(ElementBase):
         self.__layer = self.__get_layer()
         self.__header = self.__parse_sql_header()
         self.__name = self.__get_name()
+        self.__output_name = self.__get_output_name()
 
     def __init__(self, path):
         self.__path = path
@@ -98,6 +102,10 @@ class FileElement(ElementBase):
     @property
     def show_name(self):
         return self.layer.name + '.' + self.name
+
+    @property
+    def output_name(self):
+        return self.__output_name
         
     @property
     def layer(self):
@@ -123,11 +131,12 @@ class FileElement(ElementBase):
 
     def __str__(self):
         return str.format(
-            'header:{} | layer:{} | name:{} | show_name:{} | path:{} | input:{} | output:{}', 
+            'header:{} | layer:{} | name:{} | show_name:{} | output_name:{} | path:{} | input:{} | output:{}', 
             self.header, 
             self.layer, 
             self.name,
             self.show_name,
+            self.output_name, 
             self.path, 
             self.input, 
             self.output)
@@ -159,6 +168,9 @@ class SQLElement(FileElement):
 
     def __get_name(self):
         return self.path.split('/')[-1].replace('.hql', '')
+    
+    def __get_output_name(self):
+        return __get_name()
 
     def __fill(self):        
         self.__name = self.__get_name()
@@ -214,3 +226,7 @@ if __name__ == '__main__' :
     fileEle_dict[fileEle2] = fileEle
     print('fileEle_dict')
     print(fileEle_dict)
+
+
+    sqlEle2 = SQLElement('/home/sam/works/cheetah_etl/src/ods/ops/pos_midplat_posm04_root.hql')
+    print(sqlEle2)
