@@ -85,17 +85,20 @@ def __find_table_name(node_inputed, type_inputed = None, temporary_inputed = Fal
     #     print(t)
 
 def analysis(single_sql_sentence):
-    logging.info(single_sql_sentence)
-    sql_string = single_sql_sentence.upper()
-    sqlstream = StringStream(sql_string)
-    inst = Lexer(sqlstream)
-    ts = TokenStream(inst)
-    parser = Parser(ts)
-    ret  = parser.statement()
-    treeroot = ret.getTree()
-    return [table_meta for table_meta in __find_table_name(treeroot)]
-
-
+    try:
+        logging.info(single_sql_sentence)
+        sql_string = single_sql_sentence.upper()
+        sqlstream = StringStream(sql_string)
+        inst = Lexer(sqlstream)
+        ts = TokenStream(inst)
+        parser = Parser(ts)
+        ret  = parser.statement()
+        treeroot = ret.getTree()
+        return [table_meta for table_meta in __find_table_name(treeroot)]
+    except Exception:
+        logging.error(single_sql_sentence)
+        raise
+    
 if __name__=='__main__':
     # __test()
     #sql_string = "CREATE TEMPORARY TABLE IF NOT EXISTS  tmp.dwd_aldi_msap09_so_item_tmp_base_all AS SELECT id,msap09_so_id,itemid FROM ods.mlp_finance_aldi_msap09_so_item WHERE pt_create_time IN (SELECT ods.pt_create_time FROM tmp.dwd_tmp_aldi_msap09_so_item_incr tmp JOIN ods.mlp_finance_aldi_msap09_so_item ods ON ods.id = tmp.id GROUP BY ods.pt_create_time)"

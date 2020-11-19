@@ -150,21 +150,25 @@ class FileElement(ElementBase):
 class SQLElement(FileElement):
     
     def __get_meta_info(self):
-        sql_text_list = self.get_sentences(remove_set_segment=True)
-        result = {TableType.INPUT:set(), TableType.OUTPUT:set()}
-        for sql_singel_sentence in sql_text_list :
-            meta_list = analysis(sql_singel_sentence)
-            input_table_name_list = [tableItem[1] for tableItem in meta_list if tableItem[0] == TableType.INPUT]
-            output_table_name_list = [tableItem[1] for tableItem in meta_list if tableItem[0] == TableType.OUTPUT]
-            for input in input_table_name_list :
-                result[TableType.INPUT].add(input)
-            for output in output_table_name_list :
-                result[TableType.OUTPUT].add(output)
-        
-        if(self.layer.name + '.' + self.name.upper() not in result[TableType.OUTPUT]):
-            logging.error('Table name and file name unmatched')
-            raise TargetTableException('Table name {} should be included in output list. SQL path is {}'.format(self.layer.name + '.' + self.name.upper(), self.path))
-        return result
+        try:
+            sql_text_list = self.get_sentences(remove_set_segment=True)
+            result = {TableType.INPUT:set(), TableType.OUTPUT:set()}
+            for sql_singel_sentence in sql_text_list :
+                meta_list = analysis(sql_singel_sentence)
+                input_table_name_list = [tableItem[1] for tableItem in meta_list if tableItem[0] == TableType.INPUT]
+                output_table_name_list = [tableItem[1] for tableItem in meta_list if tableItem[0] == TableType.OUTPUT]
+                for input in input_table_name_list :
+                    result[TableType.INPUT].add(input)
+                for output in output_table_name_list :
+                    result[TableType.OUTPUT].add(output)
+            
+            if(self.layer.name + '.' + self.name.upper() not in result[TableType.OUTPUT]):
+                logging.error('Table name and file name unmatched')
+                raise TargetTableException('Table name {} should be included in output list. SQL path is {}'.format(self.layer.name + '.' + self.name.upper(), self.path))
+            return result
+        except Exception:
+            logging.error(self.path)
+            raise
 
     def __get_name(self):
         return self.path.split('/')[-1].replace('.hql', '')
