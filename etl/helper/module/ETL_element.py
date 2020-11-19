@@ -179,8 +179,8 @@ class SQLElement(FileElement):
     def __fill(self):        
         self.__name = self.__get_name()
         meta_data = self.__get_meta_info()
-        self.__input = tuple(meta_data[TableType.INPUT])
-        self.__output = tuple(meta_data[TableType.OUTPUT])
+        self.__input = tuple(sorted(meta_data[TableType.INPUT]))
+        self.__output = tuple(sorted(meta_data[TableType.OUTPUT]))
 
     def __init__(self, path):
         FileElement.__init__(self, path)

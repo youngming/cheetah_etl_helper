@@ -54,11 +54,11 @@ class TreeNode(object):
 
     @property
     def upstream(self):
-        return self.__upstream
+        return sorted(self.__upstream)
 
     @property
     def downstream(self):
-        return self.__downstream
+        return sorted(self.__downstream)
 
     def __hash__(self):
         return self.__element.__hash__()
@@ -66,6 +66,10 @@ class TreeNode(object):
     def __eq__(self, other):
         if(isinstance(other, TreeNode)):
             return self.__element.__eq__(other.element)
+
+    def __lt__(self, other):
+        if(isinstance(other, TreeNode)):
+            return self.element.name < other.element.name
 
 class Tree(object):
 
