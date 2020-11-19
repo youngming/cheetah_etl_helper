@@ -11,7 +11,8 @@
 1. Write python script to create and use ETLScheduler instance
    - Set "ETL_HOME" in environment parameter ***(Optional can use 'etl_home' when startup in ETLScheduler)***
    - Set "DEPTH_LIMIT" in environment parameter ***(Optional can use 'depth_limit' when startup in ETLScheduler)***
-   - ```javascript # create a ETLScheduler instance 
+   - ```javascript 
+        # create a ETLScheduler instance 
         # etl_home is the etl home on local
         # server_etl_home is the etl home on server
         # depth_limit is depth limitation in same layer (-1 is unused)
