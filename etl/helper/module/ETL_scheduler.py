@@ -16,7 +16,7 @@ class LayerReferenceDepthLimitationException(Exception):
 
 class ETLScheduler(object):
 
-    def __init__(self, etl_home=None, depth_limit=None):
+    def __init__(self, etl_home=None, depth_limit=None, server_etl_home=None):
         self.__etl_home = etl_home
         self.__depth_limit = depth_limit
         self.tree = None
@@ -27,8 +27,11 @@ class ETLScheduler(object):
         if(self.__etl_home == None):
             raise ArgumentMissingException('Can not get argument ETL_HOME neither in ETLScheduler constructor input or in os environment.')
 
-        if(self.__depth_limit == None and os.getenv('DEPTHLIMIT') != None):
-            self.__depth_limit = int(os.getenv('DEPTHLIMIT'))
+        if(self.__depth_limit == None and os.getenv('DEPTH_LIMIT') != None):
+            self.__depth_limit = int(os.getenv('DEPTH_LIMIT'))
+        
+        if(server_etl_home == None):
+            self.__server_etl_home = self.__etl_home
 
     def __get_nodes(self):
         stg_file_gen = list(search_files_in_folder(self.__etl_home + '/src/stg', 'ops', 'sql'))
@@ -89,27 +92,7 @@ class ETLScheduler(object):
 
 if __name__ == '__main__':
     
-
     etl_scheduler = ETLScheduler(etl_home='/home/sam/cheetah_etl' ,depth_limit=1)
     etl_scheduler.scan_and_check()
     etl_scheduler.generate_output_files()
-    # for path, node in tree.nodes.items():
-    #     if(node.element.layer == None): 
-    #         print(node.element)
-
-
-    # error = tree.check_depth()
-    # print(error)
-
-    # print(tree)
-    # tree.check_depth()
-
-    # for path, node in tree.nodes.items():
-    #     print(path)
-    #     print(node.element.layer.name)
-    #     print(node.element.name)
-    #     for up in node.upstream:
-    #         print('    ' + up.element.path)
-    #         print('    ' + up.element.layer.name)
-    #         print('    ' + up.element.name)
         
