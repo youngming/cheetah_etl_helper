@@ -32,6 +32,8 @@ class ETLScheduler(object):
         
         if(server_etl_home == None):
             self.__server_etl_home = self.__etl_home
+        else:
+            self.__server_etl_home = server_etl_home
 
     def __get_nodes(self):
         stg_file_gen = list(search_files_in_folder(self.__etl_home + '/src/stg', 'ops', 'sql'))
@@ -39,10 +41,10 @@ class ETLScheduler(object):
         all_sql_element = []
         for stg_file_list in stg_file_gen:
             for stg_file in stg_file_list:
-                all_sql_element.append(FileElement(stg_file))
+                all_sql_element.append(FileElement(stg_file, self.__etl_home, self.__server_etl_home))
         for others_file_list in others_gen:
             for others_file in others_file_list:
-                all_sql_element.append(SQLElement(others_file))
+                all_sql_element.append(SQLElement(others_file, self.__etl_home, self.__server_etl_home))
         
         tree = Tree(depth_limit_same_layer=self.__depth_limit)
         for node in all_sql_element:
@@ -70,7 +72,13 @@ class ETLScheduler(object):
         file_path = self.__etl_home + '/full_info.yml'
         if(delete_before_generate):
             delete_file(file_path)
-        pass
+
+        output = []
+        for path, node in tree.nodes.items():
+            output.append(node.description())
+
+        with open(file_path , 'w+') as yaml_writer:
+            yaml.dump(output, yaml_writer)
 
     def generate_output_files(self):
         if(self.tree == None):
@@ -92,7 +100,13 @@ class ETLScheduler(object):
 
 if __name__ == '__main__':
     
-    etl_scheduler = ETLScheduler(etl_home='/home/sam/cheetah_etl' ,depth_limit=1)
+    etl_scheduler = ETLScheduler(etl_home='/home/sam/cheetah_etl' ,depth_limit=1, server_etl_home='/home/sam/works/cheetah_etl')
     etl_scheduler.scan_and_check()
+    tree = Tree()
+    for path, node in tree.nodes.items():
+        print(node.element.show_name)
+        print('--' + ','.join([n.element.show_name for n in node.upstream]))
+        print('--' + ','.join([n.element.show_name for n in node.downstream]))
+
     etl_scheduler.generate_output_files()
         

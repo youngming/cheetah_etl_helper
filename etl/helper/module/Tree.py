@@ -70,6 +70,18 @@ class TreeNode(object):
     def __lt__(self, other):
         if(isinstance(other, TreeNode)):
             return self.element.name < other.element.name
+    
+    def description(self):
+        return {
+            'name':self.element.name, 
+            'layer':self.element.layer.name, 
+            'show_name':self.element.show_name,
+            'output_name':self.element.output_name, 
+            'path':self.element.server_path, 
+            'sql':self.element.get_sentences() , 
+            'header':self.element.header, 
+            'upstream':[up.element.show_name for up in self.upstream], 
+            'downstream':[down.element.show_name for down in self.downstream]}
 
 class Tree(object):
 
@@ -197,26 +209,26 @@ if __name__ == '__main__':
     # print(tree4)
     # print(tree5)
 
-    node_dws_fct_ass_hourly_di = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/dws/ops/fct_ass_hourly_di.hql'))
-    node_dwd_fct_ass_ord_item_id = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/dwd/ops/fct_ass_ord_item_di.hql'))
-    node_dwd_dim_hour = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/dwd/ops/dim_hour.hql'))
-    node_dwd_fct_ass_paytype_ord_di = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/dwd/ops/fct_ass_paytype_ord_di.hql'))
-    node_dwd_dim_merchant = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/dwd/ops/dim_merchant.hql'))
-    node_ods_mlp_oms_so_return = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/ods/ops/mlp_oms_so_return.hql'))
+    node_dws_fct_ass_hourly_di = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/dws/ops/fct_ass_hourly_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl'))
+    node_dwd_fct_ass_ord_item_id = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/dwd/ops/fct_ass_ord_item_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl'))
+    node_dwd_dim_hour = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/dwd/ops/dim_hour.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl'))
+    node_dwd_fct_ass_paytype_ord_di = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/dwd/ops/fct_ass_paytype_ord_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl'))
+    node_dwd_dim_merchant = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/dwd/ops/dim_merchant.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl'))
+    node_ods_mlp_oms_so_return = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/ods/ops/mlp_oms_so_return.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl'))
     
-    node_dwd_dim_item = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/dwd/ops/dim_item.hql'))
-    node_dwd_fct_item_sourcing_df = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/dwd/ops/fct_itm_sourcing_df.hql'))
-    node_dwd_fct_item_price_df = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/dwd/ops/fct_item_price_df.hql'))
-    node_ods_mdm_hap_prd_hmdm_md_attr_10005 = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/ods/ops/mdm_hap_prd_hmdm_md_attr_10005.hql'))
+    node_dwd_dim_item = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/dwd/ops/dim_item.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl'))
+    node_dwd_fct_item_sourcing_df = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/dwd/ops/fct_itm_sourcing_df.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl'))
+    node_dwd_fct_item_price_df = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/dwd/ops/fct_item_price_df.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl'))
+    node_ods_mdm_hap_prd_hmdm_md_attr_10005 = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/ods/ops/mdm_hap_prd_hmdm_md_attr_10005.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl'))
     
-    node_stg_biweb_aldi_board_cs_import_data = TreeNode(FileElement('/home/sam/works/cheetah_etl/src/stg/ops/[biweb].[aldi_board].[cs_import_data].sql'))
-    node_ods_biweb_aldi_board_cs_import_data = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/ods/ops/biweb_aldi_board_cs_import_data.hql'))
-    node_stg_impt_cheetah_calendar = TreeNode(FileElement('/home/sam/works/cheetah_etl/src/stg/ops/[impt].[cheetah].[calendar].sql'))
-    node_stg_impt_cheetah_holiday = TreeNode(FileElement('/home/sam/works/cheetah_etl/src/stg/ops/[impt].[cheetah].[holiday].sql'))
-    node_stg_impt_cheetah_impt_buying_m_d_mapping = TreeNode(FileElement('/home/sam/works/cheetah_etl/src/stg/ops/[impt].[cheetah].[impt_buying_m_d_mapping].sql'))
-    node_stg_impt_cheetah_impt_channel_m = TreeNode(FileElement('/home/sam/works/cheetah_etl/src/stg/ops/[impt].[cheetah].[impt_channel_m].sql'))
+    node_stg_biweb_aldi_board_cs_import_data = TreeNode(FileElement('/home/sam/works/cheetah_etl/src/stg/ops/[biweb].[aldi_board].[cs_import_data].sql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl'))
+    node_ods_biweb_aldi_board_cs_import_data = TreeNode(SQLElement('/home/sam/works/cheetah_etl/src/ods/ops/biweb_aldi_board_cs_import_data.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl'))
+    node_stg_impt_cheetah_calendar = TreeNode(FileElement('/home/sam/works/cheetah_etl/src/stg/ops/[impt].[cheetah].[calendar].sql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl'))
+    node_stg_impt_cheetah_holiday = TreeNode(FileElement('/home/sam/works/cheetah_etl/src/stg/ops/[impt].[cheetah].[holiday].sql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl'))
+    node_stg_impt_cheetah_impt_buying_m_d_mapping = TreeNode(FileElement('/home/sam/works/cheetah_etl/src/stg/ops/[impt].[cheetah].[impt_buying_m_d_mapping].sql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl'))
+    node_stg_impt_cheetah_impt_channel_m = TreeNode(FileElement('/home/sam/works/cheetah_etl/src/stg/ops/[impt].[cheetah].[impt_channel_m].sql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl'))
 
-
+    print(node_stg_biweb_aldi_board_cs_import_data.description())
 
     tree = Tree(depth_limit_same_layer=0)
     # tree.append_node(node_dwd_dim_hour)
