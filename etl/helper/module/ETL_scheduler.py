@@ -16,7 +16,7 @@ class LayerReferenceDepthLimitationException(Exception):
 
 class ETLScheduler(object):
 
-    def __init__(self, etl_home=None, depth_limit=None, server_etl_home=None):
+    def __init__(self, etl_home=None, depth_limit=None, server_etl_home=None, alias_prefix=None):
         self.__etl_home = etl_home
         self.__depth_limit = depth_limit
         self.tree = None
@@ -35,6 +35,11 @@ class ETLScheduler(object):
         else:
             self.__server_etl_home = server_etl_home
 
+        if(alias_prefix == None):
+            self.__alias_prefix = []
+        else:
+            self.__alias_prefix = alias_prefix.split(',')
+
     def __get_nodes(self):
         stg_file_gen = list(search_files_in_folder(self.__etl_home + '/src/stg', 'ops', 'sql'))
         others_gen = list(search_files_in_folder(self.__etl_home + '/src', 'ops', 'hql'))
@@ -44,7 +49,7 @@ class ETLScheduler(object):
                 all_sql_element.append(FileElement(stg_file, self.__etl_home, self.__server_etl_home))
         for others_file_list in others_gen:
             for others_file in others_file_list:
-                all_sql_element.append(SQLElement(others_file, self.__etl_home, self.__server_etl_home))
+                all_sql_element.append(SQLElement(others_file, self.__etl_home, self.__server_etl_home, self.__alias_prefix))
         
         tree = Tree(depth_limit_same_layer=self.__depth_limit)
         for node in all_sql_element:
@@ -63,7 +68,7 @@ class ETLScheduler(object):
                 file_path = '/'.join(path.split('/')[0:-2]) + '/yml'
                 file_name = node.element.name + '.yml'
                 yaml_file = file_path + '/' + file_name
-                file_content = [up.element.output_name.lower() for up in node.upstream]
+                file_content = [up.element.reference_name.lower() for up in node.upstream]
                 with open(yaml_file , 'w+') as yaml_writer:
                     yaml.dump(file_content, yaml_writer)
 

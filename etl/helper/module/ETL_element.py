@@ -27,7 +27,7 @@ class ElementBase(object):
 
     def __eq__(self, other):
         if(isinstance(other, ElementBase)):
-            return self.path == other.path
+            return self.output_name == other.output_name
         else:
             return False
 
@@ -62,9 +62,9 @@ class FileElement(ElementBase):
         return self.path.split('/')[-1].replace('.sql', '')
     
     def __get_output_name(self):
-        file_name = self.path.split('/')[-1].upper()
+        file_name = self.path.split('/')[-1]
         table_segments = file_name.replace('[', '').replace(']', '').strip().split('.')[0:-1]
-        output_table = str(self.layer.name + '.' + reduce(lambda tp1, tp2: tp1 + '_' + tp2, table_segments))
+        output_table = str(self.layer.name.lower() + '.' + reduce(lambda tp1, tp2: tp1 + '_' + tp2, table_segments))
         return output_table
     
     def __parse_sql_header(self):
@@ -76,7 +76,7 @@ class FileElement(ElementBase):
         return result
     
     def __get_output(self):
-        return (self.__get_output_name(),)
+        return (self.__get_output_name().upper(),)
 
     def get_sentences(self, remove_set_segment = False):
         #remove sql header
@@ -105,7 +105,6 @@ class FileElement(ElementBase):
         self.__layer = self.__get_layer()
         self.__header = self.__parse_sql_header()
         self.__name = self.__get_name()
-        self.__output_name = self.__get_output_name()
 
     def __init__(self, path, local_etl_home, server_etl_home):
         ElementBase.__init__(self, path, local_etl_home, server_etl_home)
@@ -121,7 +120,11 @@ class FileElement(ElementBase):
 
     @property
     def output_name(self):
-        return self.__output_name
+        return self.__get_output_name()
+
+    @property
+    def reference_name(self):
+        return self.__get_output_name()
         
     @property
     def layer(self):
@@ -147,12 +150,13 @@ class FileElement(ElementBase):
 
     def __str__(self):
         return str.format(
-            'header:{} | layer:{} | name:{} | show_name:{} | output_name:{} | path:{} | server_path:{} | input:{} | output:{}', 
+            'header:{} | layer:{} | name:{} | show_name:{} | output_name:{} | reference_name:{} | path:{} | server_path:{} | input:{} | output:{}', 
             self.header, 
             self.layer, 
             self.name,
             self.show_name,
             self.output_name, 
+            self.reference_name, 
             self.path, 
             self.server_path, 
             self.input, 
@@ -180,8 +184,12 @@ class SQLElement(FileElement):
                     result[TableType.OUTPUT].add(output)
             
             if(self.layer.name + '.' + self.name.upper() not in result[TableType.OUTPUT]):
+                for alias in self.__alias_prefix:
+                    if(self.layer.name + '.' + self.name.replace(alias + '_', '').upper() in result[TableType.OUTPUT]):
+                        return result
                 logging.error('Table name and file name unmatched')
                 raise TargetTableException('Table name {} should be included in output list. SQL path is {}'.format(self.layer.name + '.' + self.name.upper(), self.path))
+                        
             return result
         except Exception:
             logging.error(self.path)
@@ -189,9 +197,6 @@ class SQLElement(FileElement):
 
     def __get_name(self):
         return self.path.split('/')[-1].replace('.hql', '')
-    
-    def __get_output_name(self):
-        return __get_name()
 
     def __fill(self):        
         self.__name = self.__get_name()
@@ -199,8 +204,9 @@ class SQLElement(FileElement):
         self.__input = tuple(sorted(meta_data[TableType.INPUT]))
         self.__output = tuple(sorted(meta_data[TableType.OUTPUT]))
 
-    def __init__(self, path, local_etl_home, server_etl_home):
+    def __init__(self, path, local_etl_home, server_etl_home, alias_prefix):
         FileElement.__init__(self, path, local_etl_home, server_etl_home)
+        self.__alias_prefix = alias_prefix
         self.__fill()
     
     @property
@@ -215,6 +221,17 @@ class SQLElement(FileElement):
     def output(self):
         return self.__output
 
+    @property
+    def output_name(self):
+        result = self.show_name.lower()
+        for alias in self.__alias_prefix:
+            result = result.replace(alias + '_', '')
+        return result
+    
+    @property
+    def reference_name(self):
+        return self.show_name.lower()
+
 
 if __name__ == '__main__' :
     fileEle = FileElement('/home/sam/cheetah_etl/src/stg/ops/[mdm].[hap_prd].[hmdm_md_attr_10002].sql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl')
@@ -224,30 +241,30 @@ if __name__ == '__main__' :
     print(fileEle.input)
     print(fileEle.output)
 
-    sqlEle = SQLElement('/home/sam/cheetah_etl/src/dwd/ops/fct_ass_ord_item_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl')
-    print(sqlEle)
-    print(sqlEle.get_sentences(remove_set_segment=False))
-    print(sqlEle.input)
-    print(sqlEle.output)
+    # sqlEle = SQLElement('/home/sam/cheetah_etl/src/dwd/ops/mp11_fct_ass_cs_item_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
+    # print(sqlEle)
+    # print(sqlEle.get_sentences(remove_set_segment=False))
+    # print(sqlEle.input)
+    # print(sqlEle.output)
 
-    fileEle2 = FileElement('/home/sam/cheetah_etl/src/stg/ops/[mdm].[hap_prd].[hmdm_md_attr_10002].sql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl')
+    # fileEle2 = FileElement('/home/sam/cheetah_etl/src/stg/ops/[mdm].[hap_prd].[hmdm_md_attr_10002].sql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl')
 
-    fileEle_list = [fileEle, fileEle2]
-    print('fileEle_list')
-    print(fileEle_list)
+    # fileEle_list = [fileEle, fileEle2]
+    # print('fileEle_list')
+    # print(fileEle_list)
 
-    fileEle_set = set()
-    fileEle_set.add(fileEle)
-    fileEle_set.add(fileEle2)
-    print('fileEle_set')
-    print(fileEle_set)
+    # fileEle_set = set()
+    # fileEle_set.add(fileEle)
+    # fileEle_set.add(fileEle2)
+    # print('fileEle_set')
+    # print(fileEle_set)
 
-    fileEle_dict = {}
-    fileEle_dict[fileEle] = fileEle
-    fileEle_dict[fileEle2] = fileEle
-    print('fileEle_dict')
-    print(fileEle_dict)
+    # fileEle_dict = {}
+    # fileEle_dict[fileEle] = fileEle
+    # fileEle_dict[fileEle2] = fileEle
+    # print('fileEle_dict')
+    # print(fileEle_dict)
 
 
-    sqlEle2 = SQLElement('/home/sam/cheetah_etl/src/ods/ops/pos_midplat_posm04_root.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl')
-    print(sqlEle2)
+    # sqlEle2 = SQLElement('/home/sam/cheetah_etl/src/ods/ops/pos_midplat_posm04_root.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', [])
+    # print(sqlEle2)
