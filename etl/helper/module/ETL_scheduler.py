@@ -1,5 +1,5 @@
 from etl.helper.utils.common.file_operation import search_files_in_folder, delete_files_in_folders, delete_file
-from etl.helper.module.ETL_element import FileElement, SQLElement
+from etl.helper.module.ETL_element import FileElement, SQLElement, Layer
 from etl.helper.module.Tree import TreeNode, Tree
 import os
 from functools import reduce
@@ -61,7 +61,7 @@ class ETLScheduler(object):
     #Generate output with only requried info and save them split files into different folder
     def __generate_output_with_part_info(self, tree, delete_before_generate=True):
         if(delete_before_generate):
-            delete_files_in_folders(self.__etl_home, 'yml')
+            delete_files_in_folders(self.__etl_home, 'yml', Layer.STG.name.lower())
             
         for path, node in tree.nodes.items():
             if(len(node.upstream) > 0):
