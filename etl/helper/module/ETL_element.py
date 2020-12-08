@@ -1,5 +1,5 @@
 from etl.helper.utils.common.file_operation import read_txt
-from etl.helper.utils.sql.sql_analyzer import TableType, analysis
+from etl.helper.utils.sql.sql_analyzer import TableType, analysis, ItemDuplicatedException
 from functools import reduce
 from enum import Enum
 import logging
@@ -241,11 +241,11 @@ if __name__ == '__main__' :
     print(fileEle.input)
     print(fileEle.output)
 
-    # sqlEle = SQLElement('/home/sam/cheetah_etl/src/dwd/ops/mp11_fct_ass_cs_item_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
-    # print(sqlEle)
-    # print(sqlEle.get_sentences(remove_set_segment=False))
-    # print(sqlEle.input)
-    # print(sqlEle.output)
+    sqlEle = SQLElement('/home/sam/cheetah_etl/src/dwd/ops/fct_trx_ord_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
+    print(sqlEle)
+    print(sqlEle.get_sentences(remove_set_segment=False))
+    print(sqlEle.input)
+    print(sqlEle.output)
 
     # fileEle2 = FileElement('/home/sam/cheetah_etl/src/stg/ops/[mdm].[hap_prd].[hmdm_md_attr_10002].sql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl')
 
