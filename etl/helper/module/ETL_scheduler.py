@@ -91,8 +91,8 @@ class ETLScheduler(object):
             delete_file(file_path)
 
         output = [
-            node.element.show_name for node in 
-            filter(lambda node : node.element.layer.value < Layer.DWD.value and len(node.downstream) == 0,self.tree.nodes.values())]
+            node.element.reference_name for node in 
+            filter(lambda node : node.element.layer.value < Layer.DWD.value and len(node.downstream) == 0, self.tree.nodes.values())]
 
         with open(file_path , 'w+') as yaml_writer:
             yaml.dump(output, yaml_writer)
