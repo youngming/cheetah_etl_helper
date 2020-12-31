@@ -234,18 +234,24 @@ class SQLElement(FileElement):
 
 
 if __name__ == '__main__' :
-    fileEle = FileElement('/home/sam/cheetah_etl/src/stg/ops/[mdm].[hap_prd].[hmdm_md_attr_10002].sql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl')
-    print(fileEle)
-    # print(fileEle.get_sentences(remove_set_segment=True))
-    print(fileEle.get_sentences(remove_set_segment=False))
-    print(fileEle.input)
-    print(fileEle.output)
+    # fileEle = FileElement('/home/sam/cheetah_etl/src/stg/ops/[mdm].[hap_prd].[hmdm_md_attr_10002].sql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl')
+    # print(fileEle)
+    # # print(fileEle.get_sentences(remove_set_segment=True))
+    # print(fileEle.get_sentences(remove_set_segment=False))
+    # print(fileEle.input)
+    # print(fileEle.output)
 
-    sqlEle = SQLElement('/home/sam/cheetah_etl/src/dwd/ops/fct_trx_ord_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
+    sqlEle = SQLElement('/home/sam/cheetah_etl/src/dm/ops/fct_itm_pmt_price_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
     print(sqlEle)
     print(sqlEle.get_sentences(remove_set_segment=False))
     print(sqlEle.input)
     print(sqlEle.output)
+
+    sqlEle2 = SQLElement('/home/sam/cheetah_etl/src/dm/ops/fct_purchase_receipt_diff_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
+    print(sqlEle2)
+    print(sqlEle2.get_sentences(remove_set_segment=False))
+    print(sqlEle2.input)
+    print(sqlEle2.output)
 
     # fileEle2 = FileElement('/home/sam/cheetah_etl/src/stg/ops/[mdm].[hap_prd].[hmdm_md_attr_10002].sql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl')
 

@@ -141,8 +141,7 @@ class Tree(object):
 
     def __check_depth_process(self, current_node, limitation, current_layer=None, current_count=0, through_path=[]):
         if(current_layer == None and len(through_path) == 0):
-            if(len(current_node.downstream) >0):
-                current_layer = current_node.element.layer
+            if(len(current_node.downstream) > 0):
                 through_path.append(current_node.element.show_name)
                 for downstream_node in current_node.downstream:
                     yield from self.__check_depth_process(downstream_node, limitation, current_node.element.layer, current_count, through_path)
@@ -157,7 +156,6 @@ class Tree(object):
                     for downstream_node in current_node.downstream:
                         yield from self.__check_depth_process(downstream_node, limitation, current_node.element.layer, current_count, through_path)
             elif(len(current_node.downstream) > 0):
-                current_layer = current_node.element.layer
                 current_count = 0
                 through_path = []
                 through_path.append(current_node.element.show_name)

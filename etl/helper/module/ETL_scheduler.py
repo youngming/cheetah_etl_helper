@@ -58,7 +58,7 @@ class ETLScheduler(object):
         self.tree = tree
         return tree
 
-    #Generate output with only requried info and save them split files into different folder
+    #Generate output with only required info and save them split files into different folder
     def __generate_output_with_part_info(self, tree, delete_before_generate=True):
         if(delete_before_generate):
             delete_files_in_folders(self.__etl_home, 'yml', Layer.STG.name.lower())
@@ -85,12 +85,26 @@ class ETLScheduler(object):
         with open(file_path , 'w+') as yaml_writer:
             yaml.dump(output, yaml_writer)
 
+    def __generate_output_without_reference(self, tree, delete_before_generate=True):
+        file_path = self.__etl_home + '/unused.yml'
+        if(delete_before_generate):
+            delete_file(file_path)
+
+        output = [
+            node.element.show_name for node in 
+            filter(lambda node : node.element.layer.value < Layer.DWD.value and len(node.downstream) == 0,self.tree.nodes.values())]
+
+        with open(file_path , 'w+') as yaml_writer:
+            yaml.dump(output, yaml_writer)
+
+
     def generate_output_files(self):
         if(self.tree == None):
             self.tree = self.__get_nodes()
         
         self.__generate_output_with_part_info(self.tree)
         self.__generate_output_with_full_info(self.tree)
+        self.__generate_output_without_reference(self.tree)
 
     def scan_and_check(self):
         if(self.tree == None):
@@ -98,20 +112,20 @@ class ETLScheduler(object):
         
         depth_exception_info = self.tree.check_depth()
         if(depth_exception_info != None and len(depth_exception_info) > 0):
-            logging.error('These reference are exceeded limit {}'.format(depth_exception_info))
+            logging.error('These reference are limitation exceeded {}'.format(depth_exception_info))
             raise LayerReferenceDepthLimitationException(depth_exception_info)
 
 
 
 if __name__ == '__main__':
     
-    etl_scheduler = ETLScheduler(etl_home='/home/sam/cheetah_etl' ,depth_limit=1, server_etl_home='/home/sam/works/cheetah_etl')
+    etl_scheduler = ETLScheduler(etl_home='/home/sam/cheetah_etl' ,depth_limit=1, server_etl_home='/home/sam/works/cheetah_etl', alias_prefix='mlp11')
     etl_scheduler.scan_and_check()
     tree = Tree()
-    for path, node in tree.nodes.items():
-        print(node.element.show_name)
-        print('--' + ','.join([n.element.show_name for n in node.upstream]))
-        print('--' + ','.join([n.element.show_name for n in node.downstream]))
+    # for path, node in tree.nodes.items():
+    #     print(node.element.show_name)
+    #     print('--' + ','.join([n.element.show_name for n in node.upstream]))
+    #     print('--' + ','.join([n.element.show_name for n in node.downstream]))
 
     etl_scheduler.generate_output_files()
         
