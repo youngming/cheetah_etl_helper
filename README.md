@@ -25,5 +25,5 @@
         etl_scheduler.scan_and_check()
 
         # generate and export the yml file into etl home on local
-        etl_scheduler.generate_output_files() ```
+        etl_scheduler.generate_output_files()
 2. Run 'root_folder/run.py [etl_home] [server_etl_home] [depth_limit]' directly (All parameter is same with ETLScheduler constructor)
