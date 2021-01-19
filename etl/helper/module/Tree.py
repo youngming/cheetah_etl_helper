@@ -150,8 +150,9 @@ class Tree(object):
                 current_count += 1
                 through_path.append(current_node.element.show_name)
                 if(current_count > limitation):
-                    yield '->'.join(through_path)
-                    through_path.pop()
+                    if('depth_limit' not in current_node.element.header.keys() or current_count > int(current_node.element.header['depth_limit'])):
+                        yield '->'.join(through_path)
+                        through_path.pop()
                 elif (len(current_node.downstream) >0):
                     for downstream_node in current_node.downstream:
                         yield from self.__check_depth_process(downstream_node, limitation, current_node.element.layer, current_count, list(through_path))
