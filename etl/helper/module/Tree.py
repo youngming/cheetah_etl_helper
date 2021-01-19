@@ -84,8 +84,8 @@ class TreeNode(object):
             'upstream':[up.element.show_name for up in self.upstream], 
             'downstream':[down.element.show_name for down in self.downstream]}
 
-class Tree(object):
 
+class Tree(object):
     _instance_lock = threading.Lock()
 
     def __init__(self, tree_node = None, depth_limit_same_layer = None):
@@ -144,7 +144,7 @@ class Tree(object):
             if(len(current_node.downstream) > 0):
                 through_path.append(current_node.element.show_name)
                 for downstream_node in current_node.downstream:
-                    yield from self.__check_depth_process(downstream_node, limitation, current_node.element.layer, current_count, through_path)
+                    yield from self.__check_depth_process(downstream_node, limitation, current_node.element.layer, current_count, list(through_path))
         else:
             if(current_node.element.layer == current_layer):
                 current_count += 1
@@ -154,13 +154,13 @@ class Tree(object):
                     through_path.pop()
                 elif (len(current_node.downstream) >0):
                     for downstream_node in current_node.downstream:
-                        yield from self.__check_depth_process(downstream_node, limitation, current_node.element.layer, current_count, through_path)
+                        yield from self.__check_depth_process(downstream_node, limitation, current_node.element.layer, current_count, list(through_path))
             elif(len(current_node.downstream) > 0):
                 current_count = 0
                 through_path = []
                 through_path.append(current_node.element.show_name)
                 for downstream_node in current_node.downstream:
-                    yield from self.__check_depth_process(downstream_node, limitation, current_node.element.layer, current_count, through_path)
+                    yield from self.__check_depth_process(downstream_node, limitation, current_node.element.layer, current_count, list(through_path))
 
     def check_depth(self, depth_limit = None):
         depth_limit_final = depth_limit    
@@ -229,14 +229,23 @@ if __name__ == '__main__':
 
     # print(node_stg_biweb_aldi_board_cs_import_data.description())
 
-    node_fct_ass_cs_item_di = TreeNode(SQLElement('/home/sam/cheetah_etl/src/dwd/ops/fct_ass_cs_item_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11']))
-    node_mp11_fct_ass_cs_item_di = TreeNode(SQLElement('/home/sam/cheetah_etl/src/dwd/ops/mp11_fct_ass_cs_item_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11']))
+    node_fct_itm_pmt_price_di = TreeNode(SQLElement('/home/sam/cheetah_etl/src/dm/ops/fct_itm_pmt_price_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11']))
+    node_fct_stock_cost_di = TreeNode(SQLElement('/home/sam/cheetah_etl/src/dm/ops/fct_stock_cost_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11']))
+    node_fct_stock_mov_cost_di = TreeNode(SQLElement('/home/sam/cheetah_etl/src/dm/ops/fct_stock_mov_cost_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11']))
+    node_fct_str_mon_mi = TreeNode(SQLElement('/home/sam/cheetah_etl/src/dm/ops/fct_str_mon_mi.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11']))
+    node_fct_itm_cost_price_summary_di = TreeNode(SQLElement('/home/sam/cheetah_etl/src/dm/ops/fct_itm_cost_price_summary_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11']))
 
-    tree = Tree(depth_limit_same_layer=0)
+    tree = Tree(depth_limit_same_layer=1)
 
-    tree.append_node(node_fct_ass_cs_item_di)
-    tree.append_node(node_mp11_fct_ass_cs_item_di)
+    tree.append_node(node_fct_itm_pmt_price_di)
+    tree.append_node(node_fct_stock_cost_di)
+    tree.append_node(node_fct_stock_mov_cost_di)
+    tree.append_node(node_fct_str_mon_mi)
+    tree.append_node(node_fct_itm_cost_price_summary_di)
 
+    print(tree)
+
+    tree.check_depth()
 
     # tree.append_node(node_dwd_dim_hour)
     # tree.append_node(node_dwd_fct_ass_ord_item_id)
