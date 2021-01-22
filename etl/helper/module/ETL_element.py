@@ -1,5 +1,5 @@
 from etl.helper.utils.common.file_operation import read_txt
-from etl.helper.utils.sql.sql_analyzer import TableType, analysis, ItemDuplicatedException
+from etl.helper.utils.sql.sql_analyzer import TableType, analysis, scan_specific, ItemDuplicatedException
 from functools import reduce
 from enum import Enum
 import logging
@@ -174,8 +174,8 @@ class SQLElement(FileElement):
         try:
             sql_text_list = self.get_sentences(remove_set_segment=True)
             result = {TableType.INPUT:set(), TableType.OUTPUT:set()}
-            for sql_singel_sentence in sql_text_list :
-                meta_list = analysis(sql_singel_sentence)
+            for sql_single_sentence in sql_text_list :
+                meta_list = analysis(sql_single_sentence)
                 input_table_name_list = [tableItem[1] for tableItem in meta_list if tableItem[0] == TableType.INPUT]
                 output_table_name_list = [tableItem[1] for tableItem in meta_list if tableItem[0] == TableType.OUTPUT]
                 for input in input_table_name_list :
@@ -204,7 +204,7 @@ class SQLElement(FileElement):
         self.__input = tuple(sorted(meta_data[TableType.INPUT]))
         self.__output = tuple(sorted(meta_data[TableType.OUTPUT]))
 
-    def __init__(self, path, local_etl_home, server_etl_home, alias_prefix):
+    def __init__(self, path, local_etl_home, server_etl_home, alias_prefix = []):
         FileElement.__init__(self, path, local_etl_home, server_etl_home)
         self.__alias_prefix = alias_prefix
         self.__fill()
@@ -233,6 +233,30 @@ class SQLElement(FileElement):
         return self.show_name.lower()
 
 
+class ScanSQLElement(SQLElement):
+
+    @property
+    def partition_name(self):
+        return self.__partition_name
+    
+    @property
+    def partition_source(self):
+        return self.__partition_source
+
+    @property
+    def special_columns(self):
+        return self.__special_columns
+
+    def __get_scan_elements(self):
+        sql_text_list = self.get_sentences(remove_set_segment=True)
+        special_elements = [scan_specific(single_sql_sentence) for single_sql_sentence in sql_text_list]
+        
+
+    def __init__(self, path, local_etl_home, server_etl_home):
+        SQLElement.__init__(self, path, local_etl_home, server_etl_home)
+        self.__get_scan_elements()
+
+
 if __name__ == '__main__' :
     # fileEle = FileElement('/home/sam/cheetah_etl/src/stg/ops/[mdm].[hap_prd].[hmdm_md_attr_10002].sql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl')
     # print(fileEle)
@@ -241,36 +265,54 @@ if __name__ == '__main__' :
     # print(fileEle.input)
     # print(fileEle.output)
 
-    sqlEle = SQLElement('/home/sam/cheetah_etl/src/dm/ops/fct_itm_pmt_price_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
+    # sqlEle = SQLElement('/home/sam/cheetah_etl/src/dm/ops/fct_itm_pmt_price_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
     # print(sqlEle)
     # print(sqlEle.get_sentences(remove_set_segment=False))
-    print(sqlEle.input)
-    print(sqlEle.output)
+    # print(sqlEle.input)
+    # print(sqlEle.output)
 
-    sqlEle2 = SQLElement('/home/sam/cheetah_etl/src/dm/ops/fct_stock_cost_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
+    # sqlEle2 = SQLElement('/home/sam/cheetah_etl/src/dm/ops/fct_stock_cost_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
     # print(sqlEle2)
     # print(sqlEle2.get_sentences(remove_set_segment=False))
-    print(sqlEle2.input)
-    print(sqlEle2.output)
+    # print(sqlEle2.input)
+    # print(sqlEle2.output)
 
-    sqlEle3 = SQLElement('/home/sam/cheetah_etl/src/dm/ops/fct_stock_mov_cost_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
+    # sqlEle3 = SQLElement('/home/sam/cheetah_etl/src/dm/ops/fct_stock_mov_cost_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
     # print(sqlEle3)
     # print(sqlEle3.get_sentences(remove_set_segment=False))
-    print(sqlEle3.input)
-    print(sqlEle3.output)
+    # print(sqlEle3.input)
+    # print(sqlEle3.output)
 
-    sqlEle4 = SQLElement('/home/sam/cheetah_etl/src/dm/ops/fct_str_mon_mi.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
+    # sqlEle4 = SQLElement('/home/sam/cheetah_etl/src/dm/ops/fct_str_mon_mi.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
     # print(sqlEle4)
     # print(sqlEle4.get_sentences(remove_set_segment=False))
-    print(sqlEle4.input)
-    print(sqlEle4.output)
+    # print(sqlEle4.input)
+    # print(sqlEle4.output)
 
     
-    sqlEle5 = SQLElement('/home/sam/cheetah_etl/src/dm/ops/fct_itm_cost_price_summary_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
+    # sqlEle5 = SQLElement('/home/sam/cheetah_etl/src/dm/ops/fct_itm_cost_price_summary_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
     # print(sqlEle5)
     # print(sqlEle5.get_sentences(remove_set_segment=False))
-    print(sqlEle5.input)
-    print(sqlEle5.output)
+    # print(sqlEle5.input)
+    # print(sqlEle5.output)
+
+
+
+
+    # sqlEle5 = SQLElement('/home/sam/cheetah_etl/src/ods/ops/mlp11_order_so_item.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
+    # print(sqlEle5)
+    # print(sqlEle5.get_sentences(remove_set_segment=False))
+    # print(sqlEle5.input)
+    # print(sqlEle5.output)
+
+
+    scanEle1 = ScanSQLElement('/home/sam/cheetah_etl/src/ods/ops/mlp11_order_so_item.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl')
+    # print(scanEle1)
+    # print(scanEle1.get_sentences(remove_set_segment=False))
+    # print(scanEle1.header)
+    # print(scanEle1.input)
+    # print(scanEle1.output)
+    
 
     # fileEle2 = FileElement('/home/sam/cheetah_etl/src/stg/ops/[mdm].[hap_prd].[hmdm_md_attr_10002].sql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl')
 

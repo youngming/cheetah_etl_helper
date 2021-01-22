@@ -17,6 +17,13 @@ class TableType(Enum):
     INPUT = 1
     OUTPUT = 2
 
+class SpecialColumnType(Enum):
+    PARTITION = 1
+    FUNCTION = 2
+
+# class SpecialElement(object):
+#     def __init__(self, special_column_type, name=None, key=None, value=None, link=None)
+
 class ItemDuplicatedException(Exception):
     pass
 
@@ -29,6 +36,40 @@ def __walktree(node,depth = 0):
     for i in range(ch_size):
         ch =children.get(i)
         __walktree(ch,depth + 1)       
+
+def __search_node_with_specific_type(node_inputed, specific_type):
+    if(node_inputed.getType() == specific_type):
+        yield node_inputed
+    elif(node_inputed.children != None):
+        for node_child in node_inputed.children:
+            yield from __search_node_with_specific_type(node_child, specific_type)
+        
+
+def __node_with_specific_type_existed(node_inputed, specific_type):
+    isExisted = len(list(__search_node_with_specific_type(node_inputed, specific_type))) > 0
+    return isExisted
+
+
+def __find_specific_elements(node_inputed, special_elements = {}):
+    if(node_inputed.getType() == tokens.TOK_INSERT and __node_with_specific_type_existed(node_inputed, tokens.TOK_PARTSPEC)):
+        table_name_nodes = list(__search_node_with_specific_type(node_inputed, tokens.TOK_TABNAME))
+        table_name_val_node = list(__search_node_with_specific_type(table_name_nodes[0], tokens.VALUE))
+        # table name
+        table_name = reduce(lambda t1, t2: t1.getText() + '.' + t2.getText(), table_name_val_node)
+        print(table_name)
+        
+        partition_val_nodes = list(__search_node_with_specific_type(node_inputed, tokens.TOK_PARTVAL))
+        # partition columns link with table insert
+        partition_columns = [partition_val_node.children[0].getText() for partition_val_node in partition_val_nodes]
+        print(partition_columns)
+        
+    elif(node_inputed.getType() == tokens.TOK_FUNCTION):
+        # function entry
+        pass
+    else:
+        if(node_inputed.children != None):
+            for node_child in node_inputed.children:
+                yield from __find_specific_elements(node_child, special_elements) 
 
 def __find_table_name(node_inputed, type_inputed = None, temporary_inputed = False):
     type = type_inputed
@@ -139,7 +180,7 @@ def __check_selectdi_duplication(node_inputed):
     # sql_string = "INSERT OVERWRITE TABLE ods.impt_cheetah_impt_buying_m_d_mapping PARTITION (dt='{{ dt }}') SELECT buying_manager,buying_director,from_unixtime(unix_timestamp(),'yyyy-MM-dd HH:mm:ss') AS etl_date FROM odh.impt_cheetah_impt_buying_m_d_mapping WHERE  dt='{{ dt }}'"
     #sql_string = "SELECT * FROM ABC.DEF AS TMP WHERE TMP.TIME > '87'"
     #sql_string = "CREATE TEMPORARY TABLE IF NOT EXISTS tmp.dwd_tmp_aldi_msap09_so_item_incr as SELECT id,msap09_so_id,itemid,from_unixtime(unix_timestamp(),'yyyy-MM-dd HH:mm:ss') AS etl_date FROM stg.mlp_finance_aldi_msap09_so_item WHERE dt='{{ dt }}'"
-    #sql_string = "CREATE TEMPORARY TABLE IF NOT EXISTS  tmp.dwd_aldi_msap09_so_item_tmp_base_all AS SELECT id,msap09_so_id,itemid FROM ods.mlp_finance_aldi_msap09_so_item WHERE pt_create_time IN (SELECT ods.pt_create_time FROM tmp.dwd_tmp_aldi_msap09_so_item_incr tmp JOIN ods.mlp_finance_aldi_msap09_so_item ods ON ods.id = tmp.id GROUP BY ods.pt_create_time)"
+    #sql_string = "CREATE TETOK_FUNCTIONMPORARY TABLE IF NOT EXISTS  tmp.dwd_aldi_msap09_so_item_tmp_base_all AS SELECT id,msap09_so_id,itemid FROM ods.mlp_finance_aldi_msap09_so_item WHERE pt_create_time IN (SELECT ods.pt_create_time FROM tmp.dwd_tmp_aldi_msap09_so_item_incr tmp JOIN ods.mlp_finance_aldi_msap09_so_item ods ON ods.id = tmp.id GROUP BY ods.pt_create_time)"
     #sql_string = "CREATE TEMPORARY TABLE IF NOT EXISTS  tmp.dwd_tmp_aldi_msap09_so_item_result AS SELECT pfd.id,pfd.msap09_so_id,pfd.itemid FROM tmp.dwd_aldi_msap09_so_item_tmp_base_all pfd LEFT JOIN tmp.dwd_tmp_aldi_msap09_so_item_incr tmp ON pfd.id = tmp.id WHERE tmp.id IS NULL"
     #sql_string = "insert overwrite table dwd.fct_item_price_df SELECT mhphmh.c_10144 AS pk_fk_item_code,'' AS pk_fk_merchant_code,mhphmh.c_10169 AS currency,mhphmh.c_10170 AS price_unit,mhphmh.c_10171 AS qty_unit,from_unixtime(unix_timestamp(),'yyyy-MM-dd HH:mm:ss') AS etl_date FROM ods.mdm_hap_prd_hmdm_md_his_10002 mhphmh JOIN  dwd.dim_channel dc ON  mhphmh.c_10249=dc.source_channel_id AND dc.sys_type=\"MDM\" LEFT JOIN  dwd.dim_item di ON  mhphmh.c_10144=di.pk_item_code"
     
@@ -156,6 +197,12 @@ def __check_selectdi_duplication(node_inputed):
     #     print(t)
 
 def analysis(single_sql_sentence):
+    return __analysis_function(single_sql_sentence, __find_table_name)
+
+def scan_specific(single_sql_sentence):
+    return __analysis_function(single_sql_sentence, __find_specific_elements)
+
+def __analysis_function(single_sql_sentence, analysis_function):
     try:
         logging.info(single_sql_sentence)
         sql_string = single_sql_sentence.upper()
@@ -166,11 +213,11 @@ def analysis(single_sql_sentence):
         ret  = parser.statement()
         treeroot = ret.getTree()
         # __walktree(treeroot)
-        return [table_meta for table_meta in __find_table_name(treeroot)]
+        return [analysis_result for analysis_result in analysis_function(treeroot)]
     except Exception:
         logging.error(single_sql_sentence)
         raise
-    
+
 if __name__=='__main__':
     # __test()
     #sql_string = "CREATE TEMPORARY TABLE IF NOT EXISTS  tmp.dwd_aldi_msap09_so_item_tmp_base_all AS SELECT id,msap09_so_id,itemid FROM ods.mlp_finance_aldi_msap09_so_item WHERE pt_create_time IN (SELECT ods.pt_create_time FROM tmp.dwd_tmp_aldi_msap09_so_item_incr tmp JOIN ods.mlp_finance_aldi_msap09_so_item ods ON ods.id = tmp.id GROUP BY ods.pt_create_time)"
