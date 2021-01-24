@@ -21,8 +21,57 @@ class SpecialColumnType(Enum):
     PARTITION = 1
     FUNCTION = 2
 
-# class SpecialElement(object):
-#     def __init__(self, special_column_type, name=None, key=None, value=None, link=None)
+class TablePartition(object):
+    def __init__(self, table_name, partition_columns):
+        self.__table_name = table_name
+        self.__partition_columns = partition_columns
+    
+    @property
+    def table_name(self):
+        return self.__table_name
+    
+    @property
+    def partition_columns(self):
+        return self.__partition_columns
+
+    def __str__(self):
+        return str('table name: {0} -> partition columns: {1}').format(self.table_name, self.partition_columns)
+
+class FunctionElement(object):
+    @property
+    def function_name(self):
+        return self.__function_name
+    
+    @property
+    def alias_name(self):
+        return self.__alias_name
+
+    @property
+    def arguments(self):
+        return self.__arguments
+
+    # @function_name.setter
+    def set_function_name(self, function_name):
+        self.__function_name = function_name
+   
+    # @alias_name.setter
+    def set_alias_name(self, alias_name):
+        self.__alias_name = alias_name
+
+    def append_argument(self, argument):
+        if(isinstance(argument, list)):
+            for i in argument:
+                self.__arguments.append(i)
+        else:
+            self.__arguments.append(argument)
+
+    def __init__(self) -> None:
+        self.__arguments = list()
+        self.__alias_name = ''
+        self.__function_name = ''
+
+    def __str__(self) -> str:
+        return str('function name: {0} | alias name: {1} | arguments: {2}').format(self.function_name, self.alias_name, [argument.__str__() for argument in self.arguments])
 
 class ItemDuplicatedException(Exception):
     pass
@@ -44,28 +93,68 @@ def __search_node_with_specific_type(node_inputed, specific_type):
         for node_child in node_inputed.children:
             yield from __search_node_with_specific_type(node_child, specific_type)
         
+def __search_node_with_specific_type_only_in_child(node_inputed, specific_type):
+    if(node_inputed.children != None):
+        return list(filter(lambda child_node: child_node.getType() == specific_type, node_inputed.children))
+
+def __search_node_without_specific_type_only_in_child(node_inputed, specific_type):
+    if(node_inputed.children != None):
+        return list(filter(lambda child_node: child_node.getType() != specific_type, node_inputed.children))
 
 def __node_with_specific_type_existed(node_inputed, specific_type):
     isExisted = len(list(__search_node_with_specific_type(node_inputed, specific_type))) > 0
     return isExisted
 
+def __node_with_specific_type_existed_only_in_child(node_inputed, specific_type):
+    specific_node_in_children = __search_node_with_specific_type_only_in_child(node_inputed, specific_type)
+    isExisted = specific_node_in_children != None and len(specific_node_in_children) > 0
+    return isExisted
+
+def __generator_function(node_func_parent, index = 0, parent_function_name = None):
+    function = FunctionElement()
+    if(__node_with_specific_type_existed_only_in_child(node_func_parent, tokens.IDENTIFY)):
+        alias_node = __search_node_with_specific_type_only_in_child(node_func_parent, tokens.IDENTIFY)[0]
+        if(parent_function_name == None or parent_function_name != alias_node.getText()):
+            function.set_alias_name(alias_node.getText())
+    function_node = __search_node_with_specific_type_only_in_child(node_func_parent, tokens.TOK_FUNCTION)[index]
+    if(__node_with_specific_type_existed_only_in_child(function_node, tokens.IDENTIFY)):
+        function_name = __search_node_with_specific_type_only_in_child(function_node, tokens.IDENTIFY)[0].getText()
+    else:
+        function_name = 'CAST'
+    function.set_function_name(function_name)
+    
+
+    argument_node_list = __search_node_without_specific_type_only_in_child(function_node, tokens.IDENTIFY)
+    for argument_node in argument_node_list:
+        if(argument_node.getType() == tokens.TOK_FUNCTION):
+            function.append_argument(__generator_function(function_node, parent_function_name = function.function_name))
+        else:
+            if(argument_node.children == None):
+                function.append_argument(argument_node.getText())
+            else:
+                function.append_argument(argument_node.getText().join([argument.getText() for argument in argument_node.children]))
+
+    return function
 
 def __find_specific_elements(node_inputed, special_elements = {}):
     if(node_inputed.getType() == tokens.TOK_INSERT and __node_with_specific_type_existed(node_inputed, tokens.TOK_PARTSPEC)):
         table_name_nodes = list(__search_node_with_specific_type(node_inputed, tokens.TOK_TABNAME))
-        table_name_val_node = list(__search_node_with_specific_type(table_name_nodes[0], tokens.VALUE))
+        table_name_val_node = list(__search_node_with_specific_type(table_name_nodes[0], tokens.IDENTIFY))
         # table name
         table_name = reduce(lambda t1, t2: t1.getText() + '.' + t2.getText(), table_name_val_node)
-        print(table_name)
+        print('table name : %s' %table_name)
         
         partition_val_nodes = list(__search_node_with_specific_type(node_inputed, tokens.TOK_PARTVAL))
         # partition columns link with table insert
         partition_columns = [partition_val_node.children[0].getText() for partition_val_node in partition_val_nodes]
-        print(partition_columns)
-        
-    elif(node_inputed.getType() == tokens.TOK_FUNCTION):
-        # function entry
-        pass
+        print('partition columns : %s' %partition_columns)
+
+        table_partition = TablePartition(table_name, partition_columns)
+        print(table_partition)
+
+    elif(node_inputed.getType() == tokens.TOK_SELEXPR and __node_with_specific_type_existed_only_in_child(node_inputed, tokens.TOK_FUNCTION)):
+        function = __generator_function(node_inputed)
+        print('function : %s' %function)
     else:
         if(node_inputed.children != None):
             for node_child in node_inputed.children:

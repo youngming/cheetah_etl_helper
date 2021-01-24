@@ -107,7 +107,7 @@ class FileElement(ElementBase):
         self.__name = self.__get_name()
 
     def __init__(self, path, local_etl_home, server_etl_home):
-        ElementBase.__init__(self, path, local_etl_home, server_etl_home)
+        super().__init__(path, local_etl_home, server_etl_home)
         self.__fill()
 
     @property
@@ -205,7 +205,7 @@ class SQLElement(FileElement):
         self.__output = tuple(sorted(meta_data[TableType.OUTPUT]))
 
     def __init__(self, path, local_etl_home, server_etl_home, alias_prefix = []):
-        FileElement.__init__(self, path, local_etl_home, server_etl_home)
+        super().__init__(path, local_etl_home, server_etl_home)
         self.__alias_prefix = alias_prefix
         self.__fill()
     
@@ -253,7 +253,7 @@ class ScanSQLElement(SQLElement):
         
 
     def __init__(self, path, local_etl_home, server_etl_home):
-        SQLElement.__init__(self, path, local_etl_home, server_etl_home)
+        super().__init__(path, local_etl_home, server_etl_home)
         self.__get_scan_elements()
 
 
