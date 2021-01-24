@@ -73,6 +73,36 @@ class FunctionElement(object):
     def __str__(self) -> str:
         return str('function name: {0} | alias name: {1} | arguments: {2}').format(self.function_name, self.alias_name, [argument.__str__() for argument in self.arguments])
 
+    def expression(self):
+        result = self.function_name + '('
+        isFirst = True
+        if(self.function_name != 'CAST'):
+            for argument in self.arguments:
+                if(not isFirst):
+                    result += ','
+                isFirst = False
+                if(isinstance(argument, FunctionElement)):
+                    result += argument.expression()
+                else:
+                    result += argument
+        elif(self.function_name == 'CAST' and len(self.arguments) == 2):
+            key = self.arguments[1]
+            type = self.arguments[0].replace('TOK_', '')
+            if(isinstance(key, FunctionElement)):
+                result += key.expression()
+            else:
+                result += key
+            result += ' AS ' + type
+        
+        result += ')'
+        
+        if(self.alias_name != ''):
+            result += " AS " + self.alias_name
+        
+        return result
+
+            
+
 class ItemDuplicatedException(Exception):
     pass
 
@@ -154,7 +184,7 @@ def __find_specific_elements(node_inputed, special_elements = {}):
 
     elif(node_inputed.getType() == tokens.TOK_SELEXPR and __node_with_specific_type_existed_only_in_child(node_inputed, tokens.TOK_FUNCTION)):
         function = __generator_function(node_inputed)
-        print('function : %s' %function)
+        print('function : %s' %function.expression())
     else:
         if(node_inputed.children != None):
             for node_child in node_inputed.children:
