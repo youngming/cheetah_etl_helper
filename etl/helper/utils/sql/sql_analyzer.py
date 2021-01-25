@@ -94,8 +94,8 @@ class FunctionElement(object):
         self.__upstream = set()
 
     def __str__(self) -> str:
-        # return str('function name: {0} | alias name: {1} | source_column: {2} | expression: {3} | argument: {4}').format(self.function_name, self.alias_name, self.source_column, self.expression(), [argument.__str__() for argument in self.arguments])
-        return str('function name: {0} | alias name: {1} | source_column: {2} | expression: {3}').format(self.function_name, self.alias_name, self.source_column, self.expression())
+        return str('function name: {0} | alias name: {1} | source_column: {2} | expression: {3} | argument: {4}').format(self.function_name, self.alias_name, self.source_column, self.expression(), [argument.__str__() for argument in self.arguments])
+        # return str('function name: {0} | alias name: {1} | source_column: {2} | expression: {3}').format(self.function_name, self.alias_name, self.source_column, self.expression())
 
     def expression(self):
         result = self.function_name + '('

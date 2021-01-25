@@ -232,6 +232,27 @@ class SQLElement(FileElement):
     def reference_name(self):
         return self.show_name.lower()
 
+class Function(object):
+    
+    def function_name(self):
+        return self.__function_name
+    
+    def source_columns(self):
+        return self.__source_columns
+
+    def expression(self):
+        return self.__expression
+
+    def __init__(self, function_name, source_columns, expression) -> None:
+        self.__function_name = function_name
+        self.__source_columns = source_columns
+        self.__expression = expression
+
+    
+    def __str__(self) -> str:
+        return 'function name: {0} | source_columns: {1} | expression: {2}'.format(self.__function_name, self.__source_columns, self.__expression)
+
+
 
 class ScanSQLElement(SQLElement):
 
@@ -255,22 +276,14 @@ class ScanSQLElement(SQLElement):
     
         downstream = set(self.output)
         upstream = set(self.input)
-
-        input = upstream - downstream
+        self.__upstreams = upstream - downstream
 
         for r in result:
             if(isinstance(r, TablePartition)):
                 self.__partitions.append(r)
             if(isinstance(r, FunctionElement)):
-                self.__functions.append(r)
-
-        
-        self.__upstreams.append(input)
-        # print(input)
-
-        # print(result)
-        
-        
+                self.__functions.append(Function(r.function_name, r.source_column, r.expression()))
+                # self.__functions.append(r)
 
     def __init__(self, path, local_etl_home, server_etl_home):
         super().__init__(path, local_etl_home, server_etl_home)
@@ -332,8 +345,8 @@ if __name__ == '__main__' :
     # print(sqlEle5.output)
 
 
-    # scanEle1 = ScanSQLElement('/home/sam/cheetah_etl/src/ods/ops/sap_ep1_eket.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl')
-    scanEle1 = ScanSQLElement('/home/sam/cheetah_etl/src/ods/ops/mlp11_order_so_item.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl')
+    scanEle1 = ScanSQLElement('/home/sam/cheetah_etl/src/ods/ops/sap_ep1_eket.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl')
+    # scanEle1 = ScanSQLElement('/home/sam/cheetah_etl/src/ods/ops/mlp11_order_so_item.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl')
     print(scanEle1)
     # print(scanEle1)
     # print(scanEle1.get_sentences(remove_set_segment=False))
