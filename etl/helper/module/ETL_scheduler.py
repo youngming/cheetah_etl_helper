@@ -1,5 +1,5 @@
 from etl.helper.utils.common.file_operation import search_files_in_folder, delete_files_in_folders, delete_file
-from etl.helper.module.ETL_element import FileElement, SQLElement, Layer
+from etl.helper.module.ETL_element import FileElement, SQLElement, Layer, ScanSQLElement
 from etl.helper.module.Tree import TreeNode, Tree
 import os
 from functools import reduce
@@ -57,6 +57,18 @@ class ETLScheduler(object):
         
         self.tree = tree
         return tree
+
+    def get_ods_nodes(self):
+        all_sql_element = []
+        ods_gen = list(search_files_in_folder(self.__etl_home + '/src/ods', 'ops', 'hql'))
+        for others_file_list in ods_gen:
+            for others_file in others_file_list:
+                all_sql_element.append(ScanSQLElement(others_file, self.__etl_home, self.__server_etl_home).description())
+        file_path = self.__etl_home + '/ods_scan.yml'
+        delete_file(file_path)
+        with open(file_path , 'w+') as yaml_writer:
+            yaml.dump(all_sql_element, yaml_writer)
+
 
     #Generate output with only required info and save them split files into different folder
     def __generate_output_with_part_info(self, tree, delete_before_generate=True):
@@ -122,10 +134,6 @@ if __name__ == '__main__':
     etl_scheduler = ETLScheduler(etl_home='/home/sam/cheetah_etl' ,depth_limit=1, server_etl_home='/home/sam/works/cheetah_etl', alias_prefix='mlp11')
     etl_scheduler.scan_and_check()
     tree = Tree()
-    # for path, node in tree.nodes.items():
-    #     print(node.element.show_name)
-    #     print('--' + ','.join([n.element.show_name for n in node.upstream]))
-    #     print('--' + ','.join([n.element.show_name for n in node.downstream]))
-
     etl_scheduler.generate_output_files()
-        
+    
+    # etl_scheduler.get_ods_nodes()

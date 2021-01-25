@@ -232,28 +232,6 @@ class SQLElement(FileElement):
     def reference_name(self):
         return self.show_name.lower()
 
-class Function(object):
-    
-    def function_name(self):
-        return self.__function_name
-    
-    def source_columns(self):
-        return self.__source_columns
-
-    def expression(self):
-        return self.__expression
-
-    def __init__(self, function_name, source_columns, expression) -> None:
-        self.__function_name = function_name
-        self.__source_columns = source_columns
-        self.__expression = expression
-
-    
-    def __str__(self) -> str:
-        return 'function name: {0} | source_columns: {1} | expression: {2}'.format(self.__function_name, self.__source_columns, self.__expression)
-
-
-
 class ScanSQLElement(SQLElement):
 
     @property
@@ -282,8 +260,7 @@ class ScanSQLElement(SQLElement):
             if(isinstance(r, TablePartition)):
                 self.__partitions.append(r)
             if(isinstance(r, FunctionElement)):
-                self.__functions.append(Function(r.function_name, r.source_column, r.expression()))
-                # self.__functions.append(r)
+                self.__functions.append(r)
 
     def __init__(self, path, local_etl_home, server_etl_home):
         super().__init__(path, local_etl_home, server_etl_home)
@@ -295,6 +272,8 @@ class ScanSQLElement(SQLElement):
     def __str__(self):
         return 'show name: {0} | header: {1} | partition: {2} | function: {3} | upstream: {4}'.format(self.show_name, self.header, [partition.__str__() for partition in self.partitions], [function.__str__() for function in self.functions], self.upstreams)
 
+    def description(self):
+        return {'show_name':self.show_name, 'header':self.header, 'upstream':list(self.upstreams), 'partitions':[partition.description() for partition in self.partitions], 'functions': [function.description() for function in self.functions]}
 
 if __name__ == '__main__' :
     # fileEle = FileElement('/home/sam/cheetah_etl/src/stg/ops/[mdm].[hap_prd].[hmdm_md_attr_10002].sql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl')
@@ -347,7 +326,8 @@ if __name__ == '__main__' :
 
     scanEle1 = ScanSQLElement('/home/sam/cheetah_etl/src/ods/ops/sap_ep1_eket.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl')
     # scanEle1 = ScanSQLElement('/home/sam/cheetah_etl/src/ods/ops/mlp11_order_so_item.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl')
-    print(scanEle1)
+    # print(scanEle1)
+    print(scanEle1.description())
     # print(scanEle1)
     # print(scanEle1.get_sentences(remove_set_segment=False))
     # print(scanEle1.header)

@@ -17,10 +17,6 @@ class TableType(Enum):
     INPUT = 1
     OUTPUT = 2
 
-class SpecialColumnType(Enum):
-    PARTITION = 1
-    FUNCTION = 2
-
 class TablePartition(object):
     def __init__(self, table_name, partition_columns):
         self.__table_name = table_name
@@ -36,6 +32,9 @@ class TablePartition(object):
 
     def __str__(self):
         return str('table name: {0} -> partition columns: {1}').format(self.table_name, self.partition_columns)
+
+    def description(self):
+        return {'table_name':self.table_name, 'partition_columns':self.partition_columns}
 
 class FunctionElement(object):
     @property
@@ -91,7 +90,6 @@ class FunctionElement(object):
         self.__alias_name = ''
         self.__function_name = ''
         self.__source_column = set()
-        self.__upstream = set()
 
     def __str__(self) -> str:
         return str('function name: {0} | alias name: {1} | source_column: {2} | expression: {3} | argument: {4}').format(self.function_name, self.alias_name, self.source_column, self.expression(), [argument.__str__() for argument in self.arguments])
@@ -125,6 +123,8 @@ class FunctionElement(object):
         
         return result
 
+    def description(self):
+        return {'function_name':self.function_name, 'source_columns':list(self.source_column), 'alias_name':self.alias_name, 'expression':self.expression()}
             
 
 class ItemDuplicatedException(Exception):
@@ -321,35 +321,6 @@ def __check_selectdi_duplication(node_inputed):
     if(select_distinct_input_size != len(select_distinct_s)): 
         duplication_msg = '{} is duplicated inputed {} but {} actually. They are {}'.format(node_inputed.getText(), select_distinct_input_size, len(select_distinct_s), select_distinct_s)
         raise ItemDuplicatedException(duplication_msg)     
-
-#def __test():
-    # cstream = StringStream("select * from new_tqable;")
-    # inst = Lexer(cstream)
-    # ts = TokenStream(inst)
-    # ts.fill()
-
-    # jlist = ts.getTokens()
-    # for i in jlist:
-    #     print(i.getText())
-    
-    # sql_string = "INSERT OVERWRITE TABLE ods.impt_cheetah_impt_buying_m_d_mapping PARTITION (dt='{{ dt }}') SELECT buying_manager,buying_director,from_unixtime(unix_timestamp(),'yyyy-MM-dd HH:mm:ss') AS etl_date FROM odh.impt_cheetah_impt_buying_m_d_mapping WHERE  dt='{{ dt }}'"
-    #sql_string = "SELECT * FROM ABC.DEF AS TMP WHERE TMP.TIME > '87'"
-    #sql_string = "CREATE TEMPORARY TABLE IF NOT EXISTS tmp.dwd_tmp_aldi_msap09_so_item_incr as SELECT id,msap09_so_id,itemid,from_unixtime(unix_timestamp(),'yyyy-MM-dd HH:mm:ss') AS etl_date FROM stg.mlp_finance_aldi_msap09_so_item WHERE dt='{{ dt }}'"
-    #sql_string = "CREATE TETOK_FUNCTIONMPORARY TABLE IF NOT EXISTS  tmp.dwd_aldi_msap09_so_item_tmp_base_all AS SELECT id,msap09_so_id,itemid FROM ods.mlp_finance_aldi_msap09_so_item WHERE pt_create_time IN (SELECT ods.pt_create_time FROM tmp.dwd_tmp_aldi_msap09_so_item_incr tmp JOIN ods.mlp_finance_aldi_msap09_so_item ods ON ods.id = tmp.id GROUP BY ods.pt_create_time)"
-    #sql_string = "CREATE TEMPORARY TABLE IF NOT EXISTS  tmp.dwd_tmp_aldi_msap09_so_item_result AS SELECT pfd.id,pfd.msap09_so_id,pfd.itemid FROM tmp.dwd_aldi_msap09_so_item_tmp_base_all pfd LEFT JOIN tmp.dwd_tmp_aldi_msap09_so_item_incr tmp ON pfd.id = tmp.id WHERE tmp.id IS NULL"
-    #sql_string = "insert overwrite table dwd.fct_item_price_df SELECT mhphmh.c_10144 AS pk_fk_item_code,'' AS pk_fk_merchant_code,mhphmh.c_10169 AS currency,mhphmh.c_10170 AS price_unit,mhphmh.c_10171 AS qty_unit,from_unixtime(unix_timestamp(),'yyyy-MM-dd HH:mm:ss') AS etl_date FROM ods.mdm_hap_prd_hmdm_md_his_10002 mhphmh JOIN  dwd.dim_channel dc ON  mhphmh.c_10249=dc.source_channel_id AND dc.sys_type=\"MDM\" LEFT JOIN  dwd.dim_item di ON  mhphmh.c_10144=di.pk_item_code"
-    
-    # sql_string = sql_string.upper()
-    # print(sql_string)
-    # sqlstream = StringStream(sql_string)
-    # inst = Lexer(sqlstream)
-    # ts = TokenStream(inst)
-    # parser = Parser(ts)
-    # ret  = parser.statement()
-    # treeroot = ret.getTree()
-
-    # for t in __find_table_name(treeroot):
-    #     print(t)
 
 def analysis(single_sql_sentence):
     return __analysis_function(single_sql_sentence, __find_table_name)
