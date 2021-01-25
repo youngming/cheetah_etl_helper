@@ -1,5 +1,5 @@
 from etl.helper.utils.common.file_operation import read_txt
-from etl.helper.utils.sql.sql_analyzer import TableType, analysis, scan_specific, ItemDuplicatedException
+from etl.helper.utils.sql.sql_analyzer import FunctionElement, TablePartition, TableType, analysis, scan_specific, ItemDuplicatedException
 from functools import reduce
 from enum import Enum
 import logging
@@ -236,25 +236,51 @@ class SQLElement(FileElement):
 class ScanSQLElement(SQLElement):
 
     @property
-    def partition_name(self):
-        return self.__partition_name
+    def partitions(self):
+        return self.__partitions
     
     @property
-    def partition_source(self):
-        return self.__partition_source
+    def functions(self):
+        return self.__functions
 
     @property
-    def special_columns(self):
-        return self.__special_columns
+    def upstreams(self):
+        return self.__upstreams
 
     def __get_scan_elements(self):
         sql_text_list = self.get_sentences(remove_set_segment=True)
-        special_elements = [scan_specific(single_sql_sentence) for single_sql_sentence in sql_text_list]
+        result = []
+        for single_sql_sentence in sql_text_list:
+            result.extend(scan_specific(single_sql_sentence))
+    
+        downstream = set(self.output)
+        upstream = set(self.input)
+
+        input = upstream - downstream
+
+        for r in result:
+            if(isinstance(r, TablePartition)):
+                self.__partitions.append(r)
+            if(isinstance(r, FunctionElement)):
+                self.__functions.append(r)
+
+        
+        self.__upstreams.append(input)
+        # print(input)
+
+        # print(result)
+        
         
 
     def __init__(self, path, local_etl_home, server_etl_home):
         super().__init__(path, local_etl_home, server_etl_home)
+        self.__partitions = []
+        self.__functions = []
+        self.__upstreams = []
         self.__get_scan_elements()
+
+    def __str__(self):
+        return 'show name: {0} | header: {1} | partition: {2} | function: {3} | upstream: {4}'.format(self.show_name, self.header, [partition.__str__() for partition in self.partitions], [function.__str__() for function in self.functions], self.upstreams)
 
 
 if __name__ == '__main__' :
@@ -306,7 +332,9 @@ if __name__ == '__main__' :
     # print(sqlEle5.output)
 
 
-    scanEle1 = ScanSQLElement('/home/sam/cheetah_etl/src/ods/ops/sap_ep1_eket.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl')
+    # scanEle1 = ScanSQLElement('/home/sam/cheetah_etl/src/ods/ops/sap_ep1_eket.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl')
+    scanEle1 = ScanSQLElement('/home/sam/cheetah_etl/src/ods/ops/mlp11_order_so_item.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl')
+    print(scanEle1)
     # print(scanEle1)
     # print(scanEle1.get_sentences(remove_set_segment=False))
     # print(scanEle1.header)

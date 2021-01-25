@@ -50,6 +50,26 @@ class FunctionElement(object):
     def arguments(self):
         return self.__arguments
 
+    @property
+    def expression_pattern(self):
+        return self.expression()
+
+    @property
+    def source_column(self):
+
+        for func_argument in list(filter(lambda argument: isinstance(argument, FunctionElement), self.arguments)):
+            fun_argument_source_column = func_argument.source_column
+            for fun_argument_source in fun_argument_source_column:
+                self.__source_column.add(fun_argument_source)
+        return self.__source_column
+
+    def set_source_column(self, source_column):
+        if(isinstance(source_column, set)):
+            for i in source_column:
+                self.__source_column.add(i)
+        else:
+            self.__source_column.add(source_column)
+
     # @function_name.setter
     def set_function_name(self, function_name):
         self.__function_name = function_name
@@ -65,13 +85,17 @@ class FunctionElement(object):
         else:
             self.__arguments.append(argument)
 
+    
     def __init__(self) -> None:
         self.__arguments = list()
         self.__alias_name = ''
         self.__function_name = ''
+        self.__source_column = set()
+        self.__upstream = set()
 
     def __str__(self) -> str:
-        return str('function name: {0} | alias name: {1} | arguments: {2}').format(self.function_name, self.alias_name, [argument.__str__() for argument in self.arguments])
+        # return str('function name: {0} | alias name: {1} | source_column: {2} | expression: {3} | argument: {4}').format(self.function_name, self.alias_name, self.source_column, self.expression(), [argument.__str__() for argument in self.arguments])
+        return str('function name: {0} | alias name: {1} | source_column: {2} | expression: {3}').format(self.function_name, self.alias_name, self.source_column, self.expression())
 
     def expression(self):
         result = self.function_name + '('
@@ -140,6 +164,17 @@ def __node_with_specific_type_existed_only_in_child(node_inputed, specific_type)
     isExisted = specific_node_in_children != None and len(specific_node_in_children) > 0
     return isExisted
 
+def __append_arguments_not_function(node_inputed, function_element_inputed):
+    if(node_inputed.children == None):
+        function_element_inputed.append_argument(node_inputed.getText())
+    elif(node_inputed.getType() != tokens.TOK_TABLE_OR_COL):
+        function_element_inputed.append_argument(node_inputed.getText().join([argument.getText() if argument.getType() != tokens.TOK_TABLE_OR_COL else argument.children[0].getText() for argument in node_inputed.children]))
+        function_element_inputed.set_source_column(set([table_node.children[0].getText() for table_node in filter(lambda node_child: node_child.getType() == tokens.TOK_TABLE_OR_COL, node_inputed.children)]))
+    else:
+        source_column = __search_node_with_specific_type_only_in_child(node_inputed, tokens.IDENTIFY)[0].getText()
+        function_element_inputed.set_source_column(source_column)
+        function_element_inputed.append_argument(source_column)
+
 def __generator_function(node_func_parent, index = 0, parent_function_name = None):
     function = FunctionElement()
     if(__node_with_specific_type_existed_only_in_child(node_func_parent, tokens.IDENTIFY)):
@@ -153,42 +188,43 @@ def __generator_function(node_func_parent, index = 0, parent_function_name = Non
         function_name = 'CAST'
     function.set_function_name(function_name)
     
-
     argument_node_list = __search_node_without_specific_type_only_in_child(function_node, tokens.IDENTIFY)
+    index_tmp = 0
     for argument_node in argument_node_list:
         if(argument_node.getType() == tokens.TOK_FUNCTION):
-            function.append_argument(__generator_function(function_node, parent_function_name = function.function_name))
+            function.append_argument(__generator_function(function_node, index = index_tmp, parent_function_name = function.function_name))
+            index_tmp += 1
         else:
-            if(argument_node.children == None):
-                function.append_argument(argument_node.getText())
-            else:
-                function.append_argument(argument_node.getText().join([argument.getText() for argument in argument_node.children]))
+            __append_arguments_not_function(argument_node, function)
 
     return function
 
-def __find_specific_elements(node_inputed, special_elements = {}):
+def __find_specific_elements(node_inputed):
     if(node_inputed.getType() == tokens.TOK_INSERT and __node_with_specific_type_existed(node_inputed, tokens.TOK_PARTSPEC)):
         table_name_nodes = list(__search_node_with_specific_type(node_inputed, tokens.TOK_TABNAME))
         table_name_val_node = list(__search_node_with_specific_type(table_name_nodes[0], tokens.IDENTIFY))
         # table name
         table_name = reduce(lambda t1, t2: t1.getText() + '.' + t2.getText(), table_name_val_node)
-        print('table name : %s' %table_name)
+        # print('table name : %s' %table_name)
         
         partition_val_nodes = list(__search_node_with_specific_type(node_inputed, tokens.TOK_PARTVAL))
         # partition columns link with table insert
         partition_columns = [partition_val_node.children[0].getText() for partition_val_node in partition_val_nodes]
-        print('partition columns : %s' %partition_columns)
+        # print('partition columns : %s' %partition_columns)
 
         table_partition = TablePartition(table_name, partition_columns)
-        print(table_partition)
+        # print(table_partition)
+        yield table_partition
 
     elif(node_inputed.getType() == tokens.TOK_SELEXPR and __node_with_specific_type_existed_only_in_child(node_inputed, tokens.TOK_FUNCTION)):
         function = __generator_function(node_inputed)
-        print('function : %s' %function.expression())
+        # print('function : %s' %function)
+        yield function
+        
     else:
         if(node_inputed.children != None):
             for node_child in node_inputed.children:
-                yield from __find_specific_elements(node_child, special_elements) 
+                yield from __find_specific_elements(node_child) 
 
 def __find_table_name(node_inputed, type_inputed = None, temporary_inputed = False):
     type = type_inputed
