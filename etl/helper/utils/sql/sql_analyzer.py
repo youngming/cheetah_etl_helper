@@ -168,8 +168,15 @@ def __append_arguments_not_function(node_inputed, function_element_inputed):
     if(node_inputed.children == None):
         function_element_inputed.append_argument(node_inputed.getText())
     elif(node_inputed.getType() != tokens.TOK_TABLE_OR_COL):
-        function_element_inputed.append_argument(node_inputed.getText().join([argument.getText() if argument.getType() != tokens.TOK_TABLE_OR_COL else argument.children[0].getText() for argument in node_inputed.children]))
-        function_element_inputed.set_source_column(set([table_node.children[0].getText() for table_node in filter(lambda node_child: node_child.getType() == tokens.TOK_TABLE_OR_COL, node_inputed.children)]))
+        if(node_inputed.getType() == tokens.TOK_DECIMAL):
+            function_element_inputed.append_argument('DECIMAL(' + ','.join([node.getText() for node in node_inputed.children]) + ')')
+            function_element_inputed.set_source_column(set([table_node.children[0].getText() for table_node in filter(lambda node_child: node_child.getType() == tokens.TOK_TABLE_OR_COL, node_inputed.children)]))
+        elif(__node_with_specific_type_existed(node_inputed, tokens.TOK_TABLE_OR_COL) and node_inputed.getText() != '.' and node_inputed.children[0].getText() == '.'):
+            function_element_inputed.append_argument(node_inputed.getText().join([argument.getText() if not __node_with_specific_type_existed(argument, tokens.TOK_TABLE_OR_COL) else list(__search_node_with_specific_type(argument, tokens.TOK_TABLE_OR_COL))[0].children[0].getText() + '.' + argument.children[1].getText() for argument in node_inputed.children]))
+            function_element_inputed.set_source_column(set([table_node.children[0].getText() for table_node in filter(lambda node_child: node_child.getType() == tokens.TOK_TABLE_OR_COL, node_inputed.children)]))
+        else:
+            function_element_inputed.append_argument(node_inputed.getText().join([argument.getText() if argument.getType() != tokens.TOK_TABLE_OR_COL else argument.children[0].getText() for argument in node_inputed.children]))
+            function_element_inputed.set_source_column(set([table_node.children[0].getText() for table_node in filter(lambda node_child: node_child.getType() == tokens.TOK_TABLE_OR_COL, node_inputed.children)]))
     else:
         source_column = __search_node_with_specific_type_only_in_child(node_inputed, tokens.IDENTIFY)[0].getText()
         function_element_inputed.set_source_column(source_column)

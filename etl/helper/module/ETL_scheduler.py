@@ -131,7 +131,7 @@ class ETLScheduler(object):
 
 if __name__ == '__main__':
     
-    etl_scheduler = ETLScheduler(etl_home='/home/sam/cheetah_etl' ,depth_limit=1, server_etl_home='/home/sam/works/cheetah_etl', alias_prefix='mlp11')
+    etl_scheduler = ETLScheduler(etl_home='/home/sam/cheetah_etl' ,depth_limit=1, server_etl_home='/home/sam/works/cheetah_etl', alias_prefix='mlp11,kfk')
     etl_scheduler.scan_and_check()
     tree = Tree()
     etl_scheduler.generate_output_files()

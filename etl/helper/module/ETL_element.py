@@ -324,7 +324,7 @@ if __name__ == '__main__' :
     # print(sqlEle5.output)
 
 
-    scanEle1 = ScanSQLElement('/home/sam/cheetah_etl/src/ods/ops/sap_ep1_eket.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl')
+    scanEle1 = ScanSQLElement('/home/sam/cheetah_etl/src/ods/ops/pos_midplat_posm04_items.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl')
     # scanEle1 = ScanSQLElement('/home/sam/cheetah_etl/src/ods/ops/mlp11_order_so_item.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl')
     # print(scanEle1)
     print(scanEle1.description())
