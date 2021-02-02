@@ -262,8 +262,8 @@ class ScanSQLElement(SQLElement):
             if(isinstance(r, FunctionElement)):
                 self.__functions.append(r)
 
-    def __init__(self, path, local_etl_home, server_etl_home):
-        super().__init__(path, local_etl_home, server_etl_home)
+    def __init__(self, path, local_etl_home, server_etl_home, alias_prefix=[]):
+        super().__init__(path, local_etl_home, server_etl_home, alias_prefix=alias_prefix)
         self.__partitions = []
         self.__functions = []
         self.__upstreams = []

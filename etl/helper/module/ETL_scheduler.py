@@ -60,10 +60,10 @@ class ETLScheduler(object):
 
     def get_ods_nodes(self):
         all_sql_element = []
-        ods_gen = list(search_files_in_folder(self.__etl_home + '/src/ods', 'ops', 'hql'))
+        ods_gen = list(search_files_in_folder(self.__etl_home + '/src', 'ops', 'hql'))
         for others_file_list in ods_gen:
             for others_file in others_file_list:
-                all_sql_element.append(ScanSQLElement(others_file, self.__etl_home, self.__server_etl_home).description())
+                all_sql_element.append(ScanSQLElement(others_file, self.__etl_home, self.__server_etl_home, self.__alias_prefix).description())
         file_path = self.__etl_home + '/ods_scan.yml'
         delete_file(file_path)
         with open(file_path , 'w+') as yaml_writer:
