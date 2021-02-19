@@ -105,11 +105,11 @@ class ETLScheduler(object):
 
         output = []
         for path, node in tree.nodes.items():
-            output.append([node.element.layer, node.element.reference_name, node.element.output_name, node.element.show_name])
+            output.append([node.element.layer,node.element.name, node.element.reference_name, node.element.output_name, node.element.show_name])
 
         csv_writer = open(file_path, 'w+', newline='')
         csv_write = csv.writer(csv_writer, dialect='excel')
-        csv_write.writerow(['layer', 'reference_name', 'output_name', 'show_name'])
+        csv_write.writerow(['layer', 'name', 'reference_name', 'output_name', 'show_name'])
         csv_write.writerows(output)
 
     def __generate_output_without_reference(self, tree, delete_before_generate=True):
