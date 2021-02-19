@@ -5,6 +5,7 @@ import os
 from functools import reduce
 import logging
 import yaml
+import csv
 
 #Throw this exception when without ETL_HOME argument inputed
 class ArgumentMissingException(Exception):
@@ -96,6 +97,20 @@ class ETLScheduler(object):
 
         with open(file_path , 'w+') as yaml_writer:
             yaml.dump(output, yaml_writer)
+    
+    def __generate_all_files(self, tree, delete_before_generate=True):
+        file_path = self.__etl_home + '/all_files.csv'
+        if(delete_before_generate):
+            delete_file(file_path)
+
+        output = []
+        for path, node in tree.nodes.items():
+            output.append([node.element.layer, node.element.reference_name, node.element.output_name, node.element.show_name])
+
+        csv_writer = open(file_path, 'w+', newline='')
+        csv_write = csv.writer(csv_writer, dialect='excel')
+        csv_write.writerow(['layer', 'reference_name', 'output_name', 'show_name'])
+        csv_write.writerows(output)
 
     def __generate_output_without_reference(self, tree, delete_before_generate=True):
         file_path = self.__etl_home + '/unused.yml'
@@ -117,6 +132,7 @@ class ETLScheduler(object):
         self.__generate_output_with_part_info(self.tree)
         self.__generate_output_with_full_info(self.tree)
         self.__generate_output_without_reference(self.tree)
+        self.__generate_all_files(self.tree)
 
     def scan_and_check(self):
         if(self.tree == None):
