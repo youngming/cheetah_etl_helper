@@ -59,6 +59,7 @@ class ETLScheduler(object):
         self.tree = tree
         return tree
 
+    #Use on ods function and partition scan only use once
     def get_ods_nodes(self):
         all_sql_element = []
         ods_gen = list(search_files_in_folder(self.__etl_home + '/src', 'ops', 'hql'))
@@ -70,6 +71,7 @@ class ETLScheduler(object):
         with open(file_path , 'w+') as yaml_writer:
             yaml.dump(all_sql_element, yaml_writer)
     
+    #Use on stg select item order and content check between stg ops and table init script use once
     def compare_stg_items(self):
         all_sql_element = {}
         stg_gen = list(search_files_in_folder(self.__etl_home + '/src/stg', 'ops', 'sql'))
@@ -109,6 +111,7 @@ class ETLScheduler(object):
         with open(file_path , 'w+') as yaml_writer:
             yaml.dump(output, yaml_writer)
     
+    #generate and output all files in every layer
     def __generate_all_files(self, tree, delete_before_generate=True):
         file_path = self.__etl_home + '/all_files.csv'
         if(delete_before_generate):
@@ -123,6 +126,7 @@ class ETLScheduler(object):
         csv_write.writerow(['layer', 'name', 'reference_name', 'output_name', 'show_name'])
         csv_write.writerows(output)
 
+    #generate and output all script which are unused
     def __generate_output_without_reference(self, tree, delete_before_generate=True):
         file_path = self.__etl_home + '/unused.yml'
         if(delete_before_generate):

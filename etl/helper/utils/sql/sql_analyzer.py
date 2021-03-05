@@ -335,12 +335,15 @@ def __check_selectdi_duplication(node_inputed):
         duplication_msg = '{} is duplicated inputed {} but {} actually. They are {}'.format(node_inputed.getText(), select_distinct_input_size, len(select_distinct_s), select_distinct_s)
         raise ItemDuplicatedException(duplication_msg)     
 
+#Use on regular helper check. Input/Output list check and selectdistinct and groupby duplicate check
 def analysis(single_sql_sentence):
     return __analysis_function(single_sql_sentence, __find_table_name)
 
+#Use on ods function and partition scan only use once
 def scan_specific(single_sql_sentence):
     return __analysis_function(single_sql_sentence, __find_specific_elements)
 
+#Use on stg select item order and content check between stg ops and table init script use once
 def items_select(single_sql_sentence):
     return __analysis_function(single_sql_sentence, __find_all_items_select)
 

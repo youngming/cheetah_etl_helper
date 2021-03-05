@@ -236,6 +236,7 @@ class SQLElement(FileElement):
     def reference_name(self):
         return self.show_name.lower()
 
+#Use on ods function / partition elements scan
 class ScanSQLElement(SQLElement):
 
     @property
@@ -279,6 +280,7 @@ class ScanSQLElement(SQLElement):
     def description(self):
         return {'show_name':self.show_name, 'header':self.header, 'upstream':list(self.upstreams), 'partitions':[partition.description() for partition in self.partitions], 'functions': [function.description() for function in self.functions]}
 
+#Use on stg select items order and content check between stg ops and table init script
 class STGElement(FileElement):
     
     @property
