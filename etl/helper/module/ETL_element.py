@@ -1,9 +1,12 @@
+from etl.helper.utils import sql
 from etl.helper.utils.common.file_operation import read_txt
+from etl.helper.utils.sql import sql_analyzer
 from etl.helper.utils.sql.sql_analyzer import FunctionElement, TablePartition, TableType, analysis, scan_specific, ItemDuplicatedException
 from functools import reduce
 from enum import Enum
 import logging
 import re
+from etl.helper.utils.common import mysql_ops
 
 #Throw this exception when target table wrote in SQL file unmatched file name
 class TargetTableException(Exception):
@@ -183,7 +186,7 @@ class SQLElement(FileElement):
                 for output in output_table_name_list :
                     result[TableType.OUTPUT].add(output)
             
-            if(self.layer.name + '.' + self.name.upper() not in result[TableType.OUTPUT]):
+            if(self.__check_output and self.layer.name + '.' + self.name.upper() not in result[TableType.OUTPUT]):
                 for alias in self.__alias_prefix:
                     if(self.layer.name + '.' + self.name.replace(alias + '_', '').upper() in result[TableType.OUTPUT]):
                         return result
@@ -204,9 +207,10 @@ class SQLElement(FileElement):
         self.__input = tuple(sorted(meta_data[TableType.INPUT]))
         self.__output = tuple(sorted(meta_data[TableType.OUTPUT]))
 
-    def __init__(self, path, local_etl_home, server_etl_home, alias_prefix = []):
+    def __init__(self, path, local_etl_home, server_etl_home, alias_prefix = [], check_output = True):
         super().__init__(path, local_etl_home, server_etl_home)
         self.__alias_prefix = alias_prefix
+        self.__check_output = check_output
         self.__fill()
     
     @property
@@ -275,6 +279,35 @@ class ScanSQLElement(SQLElement):
     def description(self):
         return {'show_name':self.show_name, 'header':self.header, 'upstream':list(self.upstreams), 'partitions':[partition.description() for partition in self.partitions], 'functions': [function.description() for function in self.functions]}
 
+class STGElement(FileElement):
+    
+    @property
+    def item_from_meta(self):
+        return self.__items_from_meta
+
+    @property
+    def item_from_scan(self):
+        return self.__items_from_scan
+
+    def __get_scan_elements(self):
+        sql_text_list = self.get_sentences(remove_set_segment=True)
+        if(len(sql_text_list) == 1):
+            return sql_analyzer.items_select(sql_text_list[0])
+
+    def __init__(self, path, local_etl_home, server_etl_home):
+        super().__init__(path, local_etl_home, server_etl_home)
+        self.__compare_meta_elements()
+    
+    def __compare_meta_elements(self):
+        output_tables_info = self.output_name.split('.')
+        sql_text = 'SELECT  t4.COLUMN_NAME FROM TBLS t1 INNER JOIN DBS t2 ON t1.DB_ID= t2.DB_ID INNER JOIN SDS t3 ON t1.SD_ID = t3.SD_ID INNER JOIN COLUMNS_V2 t4 ON t3.CD_ID= t4.CD_ID WHERE t2.NAME=\'{0}\' AND t1.TBL_NAME = \'{1}\' ORDER BY t4.INTEGER_IDX'.format(output_tables_info[0], output_tables_info[1])
+        self.__items_from_meta = list(map(lambda item: item[0].upper(), mysql_ops.get_list(sql_text)))
+        self.__items_from_scan = self.__get_scan_elements()
+
+    def is_same(self):
+        return self.item_from_meta == self.item_from_scan
+    
+
 if __name__ == '__main__' :
     # fileEle = FileElement('/home/sam/cheetah_etl/src/stg/ops/[mdm].[hap_prd].[hmdm_md_attr_10002].sql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl')
     # print(fileEle)
@@ -324,10 +357,10 @@ if __name__ == '__main__' :
     # print(sqlEle5.output)
 
 
-    scanEle1 = ScanSQLElement('/home/sam/cheetah_etl/src/ods/ops/pos_midplat_posm04_items.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl')
+    # scanEle1 = ScanSQLElement('/home/sam/cheetah_etl/src/ods/ops/pos_midplat_posm04_items.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl')
     # scanEle1 = ScanSQLElement('/home/sam/cheetah_etl/src/ods/ops/mlp11_order_so_item.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl')
     # print(scanEle1)
-    print(scanEle1.description())
+    # print(scanEle1.description())
     # print(scanEle1)
     # print(scanEle1.get_sentences(remove_set_segment=False))
     # print(scanEle1.header)
@@ -335,7 +368,8 @@ if __name__ == '__main__' :
     # print(scanEle1.output)
     
 
-    # fileEle2 = FileElement('/home/sam/cheetah_etl/src/stg/ops/[mdm].[hap_prd].[hmdm_md_attr_10002].sql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl')
+    fileEle2 = STGElement('/home/sam/cheetah_etl/src/stg/ops/[sap].[ep1].[a809].sql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl')
+    print(fileEle2.is_same())
 
     # fileEle_list = [fileEle, fileEle2]
     # print('fileEle_list')

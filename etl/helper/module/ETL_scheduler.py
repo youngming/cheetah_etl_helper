@@ -1,5 +1,5 @@
 from etl.helper.utils.common.file_operation import search_files_in_folder, delete_files_in_folders, delete_file
-from etl.helper.module.ETL_element import FileElement, SQLElement, Layer, ScanSQLElement
+from etl.helper.module.ETL_element import FileElement, SQLElement, Layer, STGElement, ScanSQLElement
 from etl.helper.module.Tree import TreeNode, Tree
 import os
 from functools import reduce
@@ -69,6 +69,17 @@ class ETLScheduler(object):
         delete_file(file_path)
         with open(file_path , 'w+') as yaml_writer:
             yaml.dump(all_sql_element, yaml_writer)
+    
+    def compare_stg_items(self):
+        all_sql_element = {}
+        stg_gen = list(search_files_in_folder(self.__etl_home + '/src/stg', 'ops', 'sql'))
+        for others_file_list in stg_gen:
+            for others_file in others_file_list:
+                print(others_file)
+                stg_ele = STGElement(others_file, self.__etl_home, self.__server_etl_home)
+                if(not stg_ele.is_same()):
+                    all_sql_element.update({stg_ele.show_name:stg_ele})
+        return all_sql_element
 
 
     #Generate output with only required info and save them split files into different folder
@@ -153,3 +164,8 @@ if __name__ == '__main__':
     etl_scheduler.generate_output_files()
     
     # etl_scheduler.get_ods_nodes()
+    # compared_stg_files = etl_scheduler.compare_stg_items()
+    # for (key, value) in compared_stg_files.items():
+    #     print(key)
+    #     print(value.item_from_meta)
+    #     print(value.item_from_scan)

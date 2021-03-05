@@ -206,6 +206,12 @@ def __generator_function(node_func_parent, index = 0, parent_function_name = Non
 
     return function
 
+def __find_all_items_select(node_inputed):
+    node_select = list(__search_node_with_specific_type(node_inputed, tokens.TOK_SELECT))
+    if(len(list(node_select)) == 1):
+        return list(map(lambda item_node: item_node.getText().upper(), __search_node_with_specific_type(list(node_select)[0], tokens.IDENTIFY)))
+        
+
 def __find_specific_elements(node_inputed):
     if(node_inputed.getType() == tokens.TOK_INSERT and __node_with_specific_type_existed(node_inputed, tokens.TOK_PARTSPEC)):
         table_name_nodes = list(__search_node_with_specific_type(node_inputed, tokens.TOK_TABNAME))
@@ -334,6 +340,9 @@ def analysis(single_sql_sentence):
 
 def scan_specific(single_sql_sentence):
     return __analysis_function(single_sql_sentence, __find_specific_elements)
+
+def items_select(single_sql_sentence):
+    return __analysis_function(single_sql_sentence, __find_all_items_select)
 
 def __analysis_function(single_sql_sentence, analysis_function):
     try:
