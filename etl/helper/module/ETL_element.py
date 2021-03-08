@@ -187,9 +187,6 @@ class SQLElement(FileElement):
                     result[TableType.OUTPUT].add(output)
 
             if(self.__check_output and self.output_name.upper() not in result[TableType.OUTPUT]):
-                # for alias in self.__alias_prefix:
-                #     if(self.layer.name + '.' + self.name.replace(alias + '_', '').upper() in result[TableType.OUTPUT]):
-                #         return result
                 logging.error('Table name and file name unmatched')
                 raise TargetTableException('Table name {} should be included in output list. SQL path is {}'.format(self.output_name, self.path))
                         
