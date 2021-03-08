@@ -337,17 +337,23 @@ def __check_selectdi_duplication(node_inputed):
 
 #Use on regular helper check. Input/Output list check and selectdistinct and groupby duplicate check
 def analysis(single_sql_sentence):
-    return __analysis_function(single_sql_sentence, __find_table_name)
+    return __analysis_function(single_sql_sentence, __find_table_name, show_tree = False)
+
+def is_output(single_sql_sentence, output_table):
+    return True
+
+def output_index(single_sql_sentence, output_table):
+    return []
 
 #Use on ods function and partition scan only use once
 def scan_specific(single_sql_sentence):
-    return __analysis_function(single_sql_sentence, __find_specific_elements)
+    return __analysis_function(single_sql_sentence, __find_specific_elements, show_tree = False)
 
 #Use on stg select item order and content check between stg ops and table init script use once
 def items_select(single_sql_sentence):
-    return __analysis_function(single_sql_sentence, __find_all_items_select)
+    return __analysis_function(single_sql_sentence, __find_all_items_select, show_tree = False)
 
-def __analysis_function(single_sql_sentence, analysis_function):
+def __analysis_function(single_sql_sentence, analysis_function, show_tree = False):
     try:
         logging.info(single_sql_sentence)
         sql_string = single_sql_sentence.upper()
@@ -357,7 +363,8 @@ def __analysis_function(single_sql_sentence, analysis_function):
         parser = Parser(ts)
         ret  = parser.statement()
         treeroot = ret.getTree()
-        # __walktree(treeroot)
+        if(show_tree):
+            __walktree(treeroot)
         return [analysis_result for analysis_result in analysis_function(treeroot)]
     except Exception:
         logging.error(single_sql_sentence)

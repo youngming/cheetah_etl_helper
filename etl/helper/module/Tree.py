@@ -22,14 +22,6 @@ class TreeNode(object):
     def element(self):
         return self.__element
 
-    @property
-    def upstream(self):
-        return self.__upstream
-
-    @property
-    def downstream(self):
-        return self.__downstream
-
     def append_upstream(self, tree_node):
         if(isinstance(tree_node, TreeNode)):
             tree_node_set = set()

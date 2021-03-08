@@ -1,7 +1,6 @@
 from etl.helper.utils import sql
 from etl.helper.utils.common.file_operation import read_txt
-from etl.helper.utils.sql import sql_analyzer
-from etl.helper.utils.sql.sql_analyzer import FunctionElement, TablePartition, TableType, analysis, scan_specific, ItemDuplicatedException
+from etl.helper.utils.sql.sql_analyzer import FunctionElement, TablePartition, TableType, analysis, scan_specific, items_select, ItemDuplicatedException, is_output, output_index
 from functools import reduce
 from enum import Enum
 import logging
@@ -10,6 +9,10 @@ from etl.helper.utils.common import mysql_ops
 
 #Throw this exception when target table wrote in SQL file unmatched file name
 class TargetTableException(Exception):
+    pass
+
+#Throw this exception when target table build columns index/number unmatched between metadata and running script
+class TargetTableConstructIndexException(Exception):
     pass
 
 class Layer(Enum):
@@ -188,13 +191,26 @@ class SQLElement(FileElement):
 
             if(self.__check_output and self.output_name.upper() not in result[TableType.OUTPUT]):
                 logging.error('Table name and file name unmatched')
-                raise TargetTableException('Table name {} should be included in output list. SQL path is {}'.format(self.output_name, self.path))
-                        
-            result.update({'output': self.output_name})
+                raise TargetTableException('Table name: {} should be included in output list. SQL path: {}'.format(self.output_name, self.path))
             return result
         except Exception:
             logging.error(self.path)
             raise
+
+    def __check_output_table_index(self):
+        output_sql_sentences = [sql for sql in self.get_sentences(remove_set_segment=True) if is_output(sql, self.output_name)]
+        self.__output_index_from_meta = self.__get_columns_from_meta()
+
+        for output_sql in output_sql_sentences:
+            self.__output_index_from_scan = output_index(output_sql, self.output_name)
+            if(self.__output_index_from_scan != self.__output_index_from_meta):
+                logging.error('Table construct columns index/count unmatched between metadata and running script')
+                raise TargetTableConstructIndexException('Table name: {0} / SQL path: {1} columns index/count unmatched {2} defined in metadata but {3} in running script'.format(self.output_name, self.path, self.__output_index_from_meta, self.__output_index_from_scan))
+            
+    def __get_columns_from_meta(self):
+        output_tables_info = self.output_name.split('.')
+        sql_text = 'SELECT t4.COLUMN_NAME FROM TBLS t1 INNER JOIN DBS t2 ON t1.DB_ID = t2.DB_ID INNER JOIN SDS t3 ON t1.SD_ID = t3.SD_ID INNER JOIN COLUMNS_V2 t4 ON t3.CD_ID = t4.CD_ID WHERE t2.NAME = \'{0}\' AND t1.TBL_NAME = \'{1}\' ORDER BY t4.INTEGER_IDX'.format(output_tables_info[0], output_tables_info[1])
+        return list(map(lambda item: item[0].upper(), mysql_ops.get_list(sql_text)))
 
     def __get_name(self):
         return self.path.split('/')[-1].replace('.hql', '')
@@ -202,6 +218,7 @@ class SQLElement(FileElement):
     def __fill(self):        
         self.__name = self.__get_name()
         meta_data = self.__get_meta_info()
+        # self.__check_output_table_index()
         self.__input = tuple(sorted(meta_data[TableType.INPUT]))
         self.__output = tuple(sorted(meta_data[TableType.OUTPUT]))
 
@@ -295,7 +312,7 @@ class STGElement(FileElement):
     def __get_scan_elements(self):
         sql_text_list = self.get_sentences(remove_set_segment=True)
         if(len(sql_text_list) == 1):
-            return sql_analyzer.items_select(sql_text_list[0])
+            return items_select(sql_text_list[0])
 
     def __init__(self, path, local_etl_home, server_etl_home):
         super().__init__(path, local_etl_home, server_etl_home)
