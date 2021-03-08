@@ -185,14 +185,15 @@ class SQLElement(FileElement):
                     result[TableType.INPUT].add(input)
                 for output in output_table_name_list :
                     result[TableType.OUTPUT].add(output)
-            
-            if(self.__check_output and self.layer.name + '.' + self.name.upper() not in result[TableType.OUTPUT]):
-                for alias in self.__alias_prefix:
-                    if(self.layer.name + '.' + self.name.replace(alias + '_', '').upper() in result[TableType.OUTPUT]):
-                        return result
+
+            if(self.__check_output and self.output_name.upper() not in result[TableType.OUTPUT]):
+                # for alias in self.__alias_prefix:
+                #     if(self.layer.name + '.' + self.name.replace(alias + '_', '').upper() in result[TableType.OUTPUT]):
+                #         return result
                 logging.error('Table name and file name unmatched')
-                raise TargetTableException('Table name {} should be included in output list. SQL path is {}'.format(self.layer.name + '.' + self.name.upper(), self.path))
+                raise TargetTableException('Table name {} should be included in output list. SQL path is {}'.format(self.output_name, self.path))
                         
+            result.update({'output': self.output_name})
             return result
         except Exception:
             logging.error(self.path)
@@ -228,9 +229,12 @@ class SQLElement(FileElement):
     @property
     def output_name(self):
         result = self.show_name.lower()
-        for alias in self.__alias_prefix:
-            result = result.replace(alias + '_', '')
-        return result
+        if(self.layer.value < Layer.DWD.value):
+            return result
+        else:
+            for alias in self.__alias_prefix:
+                result = result.replace(alias + '_', '')
+            return result
     
     @property
     def reference_name(self):
