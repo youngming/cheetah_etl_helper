@@ -1,6 +1,7 @@
 from etl.helper.utils.common.file_operation import search_files_in_folder, delete_files_in_folders, delete_file
 from etl.helper.module.ETL_element import FileElement, SQLElement, Layer, STGElement, ScanSQLElement
 from etl.helper.module.Tree import TreeNode, Tree
+from etl.helper.module.Messager import Messager
 import os
 from functools import reduce
 import logging
@@ -12,8 +13,8 @@ class ArgumentMissingException(Exception):
     pass
 
 #Throw this exception when same layer reference exceeded the limit
-class LayerReferenceDepthLimitationException(Exception):
-    pass
+# class LayerReferenceDepthLimitationException(Exception):
+#     pass
 
 class ETLScheduler(object):
 
@@ -162,9 +163,9 @@ class ETLScheduler(object):
         depth_exception_info = self.tree.check_depth()
         if(depth_exception_info != None and len(depth_exception_info) > 0):
             logging.error('These reference are limitation exceeded {}'.format(depth_exception_info))
-            raise LayerReferenceDepthLimitationException(depth_exception_info)
-
-
+            msg = 'Reference in same layer limitation exceeded {0}'.format(depth_exception_info)
+            # raise LayerReferenceDepthLimitationException(depth_exception_info)
+            Messager.get_instance().raise_reference_limited(msg)
 
 if __name__ == '__main__':
     

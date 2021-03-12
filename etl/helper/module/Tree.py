@@ -1,10 +1,11 @@
 from etl.helper.module.ETL_element import ElementBase, FileElement, SQLElement
 import threading
 import logging
+from etl.helper.module.Messager import Messager
 
 #Throw this exception when same tree node be inputed into tree more than once
-class TreeNodeDuplicateException(Exception):
-    pass
+# class TreeNodeDuplicateException(Exception):
+#     pass
 
 class TreeNode(object):
     def __init__(self, etl_element):
@@ -102,7 +103,9 @@ class Tree(object):
     def append_node(self, tree_node):
         #Raise an exception when push a same tree node in(same element)
         if(tree_node.element.path in self.__nodes):
-            raise TreeNodeDuplicateException('path: {} has existed in node list'.format(tree_node.element.path))
+            # raise TreeNodeDuplicateException('path: {} has existed in node list'.format(tree_node.element.path))
+            msg = 'path: {} has existed in node list'.format(tree_node.element.path)
+            Messager.get_instance().raise_item_duplicated(msg)
                 
         self.__nodes[tree_node.element.path] = tree_node
 

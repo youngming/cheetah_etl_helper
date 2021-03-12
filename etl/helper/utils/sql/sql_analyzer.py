@@ -8,6 +8,7 @@ import jnius
 from enum import Enum
 from functools import reduce
 from etl.helper.utils.sql import tokens
+from etl.helper.module.Messager import Messager
 StringStream = jnius.autoclass('org.antlr.runtime.ANTLRStringStream')
 Lexer  = jnius.autoclass('grammar.HiveLexer')
 Parser  = jnius.autoclass('grammar.HiveParser')
@@ -127,8 +128,8 @@ class FunctionElement(object):
         return {'function_name':self.function_name, 'source_columns':list(self.source_column), 'alias_name':self.alias_name, 'expression':self.expression()}
             
 
-class ItemDuplicatedException(Exception):
-    pass
+# class ItemDuplicatedException(Exception):
+#     pass
 
 def __walktree(node,depth = 0):
     print("%s%s=%s" % (str(depth) + "  "*depth,node.getText(),node.getType()))
@@ -354,7 +355,9 @@ def __check_groupby_duplication(node_inputed):
 
     if(group_input_size != len(group_item_s)): 
         duplication_msg = '{} is duplicated inputed {} but {} actually. They are {}'.format(node_inputed.getText(), group_input_size, len(group_item_s), group_item_s)
-        raise ItemDuplicatedException(duplication_msg)     
+        # raise ItemDuplicatedException(duplication_msg)
+        Messager.get_instance().raise_item_duplicated(duplication_msg)
+        
 
 def __check_selectdi_duplication(node_inputed): 
     select_distinct_node_items = list(filter(lambda node: node.getFirstChildWithType(tokens.TOK_FUNCTION) == None , node_inputed.children))
@@ -386,7 +389,8 @@ def __check_selectdi_duplication(node_inputed):
 
     if(select_distinct_input_size != len(select_distinct_s)): 
         duplication_msg = '{} is duplicated inputed {} but {} actually. They are {}'.format(node_inputed.getText(), select_distinct_input_size, len(select_distinct_s), select_distinct_s)
-        raise ItemDuplicatedException(duplication_msg)     
+        # raise ItemDuplicatedException(duplication_msg)
+        Messager.get_instance().raise_item_duplicated(duplication_msg)
 
 #Use on regular helper check. Input/Output list check and selectdistinct and groupby duplicate check
 def analysis(single_sql_sentence, **kwargs):

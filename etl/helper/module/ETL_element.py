@@ -1,19 +1,20 @@
 from etl.helper.utils import sql
 from etl.helper.utils.common.file_operation import read_txt
-from etl.helper.utils.sql.sql_analyzer import FunctionElement, TablePartition, TableType, analysis, scan_specific, items_select, ItemDuplicatedException, output_index
+from etl.helper.utils.sql.sql_analyzer import FunctionElement, TablePartition, TableType, analysis, scan_specific, items_select, output_index
 from functools import reduce
 from enum import Enum
 import logging
 import re
 from etl.helper.utils.common import mysql_ops
+from etl.helper.module.Messager import Messager
 
 #Throw this exception when target table wrote in SQL file unmatched file name
-class TargetTableException(Exception):
-    pass
+# class TargetTableException(Exception):
+#     pass
 
 #Throw this exception when target table build columns index/number unmatched between metadata and running script
-class TargetTableConstructIndexException(Exception):
-    pass
+# class TargetTableConstructIndexException(Exception):
+#     pass
 
 class Layer(Enum):
     STG=100
@@ -194,7 +195,9 @@ class SQLElement(FileElement):
 
             if(self.__check_output and self.output_name.upper() not in result[TableType.OUTPUT]):
                 logging.error('Table name and file name unmatched')
-                raise TargetTableException('Table name: {} should be included in output list. SQL path: {}'.format(self.output_name, self.path))
+                # raise TargetTableException('Table name: {} should be included in output list. SQL path: {}'.format(self.output_name, self.path))
+                msg = 'Table name: {} should be included in output list. SQL path: {}'.format(self.output_name, self.path)
+                Messager.get_instance().raise_output_unmatched(msg)
             return result
         except Exception:
             logging.error(self.path)
@@ -208,9 +211,12 @@ class SQLElement(FileElement):
         for output_sql in output_sql_sentences:
             self.__output_index_from_scan = output_index(output_sql, output_name = self.output_name.upper())
             for index_from_scan in self.__output_index_from_scan:
+                # TODO: check out confirmed and probably columns unmatched exception
                 if(index_from_scan != self.__output_index_from_meta):
                     logging.error('Table construct columns index/count unmatched between metadata and running script')
-                    raise TargetTableConstructIndexException('Table name: {} / SQL path: {} columns index/count unmatched {} defined in metadata but {} in running script'.format(self.output_name, self.path, self.__output_index_from_meta, index_from_scan))
+                    # raise TargetTableConstructIndexException('Table name: {} / SQL path: {} columns index/count unmatched {} defined in metadata but {} in running script'.format(self.output_name, self.path, self.__output_index_from_meta, index_from_scan))
+                    msg = 'Table name: {} / SQL path: {} columns index/count unmatched {} defined in metadata but {} in running script'.format(self.output_name, self.path, self.__output_index_from_meta, index_from_scan)
+                    Messager.get_instance().raise_insert_columns_unmatched_confirm(msg)
             
     def __get_columns_from_meta(self):
         output_tables_info = self.output_name.split('.')
