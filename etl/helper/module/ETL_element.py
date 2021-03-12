@@ -1,12 +1,11 @@
-from etl.helper.utils import sql
 from etl.helper.utils.common.file_operation import read_txt
 from etl.helper.utils.sql.sql_analyzer import FunctionElement, TablePartition, TableType, analysis, scan_specific, items_select, output_index
 from functools import reduce
 from enum import Enum
 import logging
 import re
-from etl.helper.utils.common import mysql_ops
 from etl.helper.module.Messager import Messager
+from etl.helper.module.MetaDataHelper import MetaDataHelper
 
 #Throw this exception when target table wrote in SQL file unmatched file name
 # class TargetTableException(Exception):
@@ -219,11 +218,8 @@ class SQLElement(FileElement):
                     Messager.get_instance().raise_insert_columns_unmatched_confirm(msg)
             
     def __get_columns_from_meta(self):
-        output_tables_info = self.output_name.split('.')
-        sql_text_physical_columns = 'SELECT t4.COLUMN_NAME FROM TBLS t1 INNER JOIN DBS t2 ON t1.DB_ID = t2.DB_ID INNER JOIN SDS t3 ON t1.SD_ID = t3.SD_ID INNER JOIN COLUMNS_V2 t4 ON t3.CD_ID = t4.CD_ID WHERE t2.NAME = \'{0}\' AND t1.TBL_NAME = \'{1}\' ORDER BY t4.INTEGER_IDX'.format(output_tables_info[0], output_tables_info[1])
-        sql_text_partition_columns = 'SELECT PKEY_NAME FROM TBLS t1 INNER JOIN DBS t2 ON t1.DB_ID= t2.DB_ID JOIN hive.PARTITION_KEYS t3 ON t1.TBL_ID = t3.TBL_ID WHERE  t2.NAME=\'{0}\' AND t1.TBL_NAME = \'{1}\' ORDER BY t3.INTEGER_IDX'.format(output_tables_info[0], output_tables_info[1])
-        columns_index_physical = list(map(lambda item: item[0].upper(), mysql_ops.get_list(sql_text_physical_columns)))
-        columns_index_partition = list(map(lambda item: item[0].upper(), mysql_ops.get_list(sql_text_partition_columns)))
+        columns_index_physical = MetaDataHelper.get_instance().physical_columns(self.output_name)
+        columns_index_partition = MetaDataHelper.get_instance().partition_columns(self.output_name)
         return {'physical':columns_index_physical, 'partition':columns_index_partition}
 
     def __get_name(self):
@@ -333,9 +329,7 @@ class STGElement(FileElement):
         self.__compare_meta_elements()
     
     def __compare_meta_elements(self):
-        output_tables_info = self.output_name.split('.')
-        sql_text = 'SELECT  t4.COLUMN_NAME FROM TBLS t1 INNER JOIN DBS t2 ON t1.DB_ID= t2.DB_ID INNER JOIN SDS t3 ON t1.SD_ID = t3.SD_ID INNER JOIN COLUMNS_V2 t4 ON t3.CD_ID= t4.CD_ID WHERE t2.NAME=\'{0}\' AND t1.TBL_NAME = \'{1}\' ORDER BY t4.INTEGER_IDX'.format(output_tables_info[0], output_tables_info[1])
-        self.__items_from_meta = list(map(lambda item: item[0].upper(), mysql_ops.get_list(sql_text)))
+        self.__items_from_meta = MetaDataHelper.get_instance().physical_columns(self.output_name)
         self.__items_from_scan = self.__get_scan_elements()
 
     def is_same(self):
@@ -393,17 +387,17 @@ if __name__ == '__main__' :
     # print(sqlEle5.input)
     # print(sqlEle5.output)
 
-    # sqlEle5 = SQLElement('/home/sam/cheetah_etl/src/ods/ops/sap_ep1_bseg.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
-    # print(sqlEle5)
-    # print(sqlEle5.get_sentences(remove_set_segment=False))
-    # print(sqlEle5.input)
-    # print(sqlEle5.output)
-
-    sqlEle5 = SQLElement('/home/sam/cheetah_etl/src/dm/ops/fct_stock_mov_cost_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
+    sqlEle5 = SQLElement('/home/sam/cheetah_etl/src/ods/ops/sap_ep1_bseg.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
     print(sqlEle5)
     print(sqlEle5.get_sentences(remove_set_segment=False))
     print(sqlEle5.input)
     print(sqlEle5.output)
+
+    # sqlEle5 = SQLElement('/home/sam/cheetah_etl/src/dm/ops/fct_stock_mov_cost_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
+    # print(sqlEle5)
+    # print(sqlEle5.get_sentences(remove_set_segment=False))
+    # print(sqlEle5.input)
+    # print(sqlEle5.output)
 
     # sqlEle5 = SQLElement('/home/sam/cheetah_etl/src/dm/ops/itn_fct_trx_mbr_life_detail_di_repurchase.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
     # print(sqlEle5)
