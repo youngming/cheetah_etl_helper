@@ -45,12 +45,18 @@ class ETLScheduler(object):
         stg_file_gen = list(search_files_in_folder(self.__etl_home + '/src/stg', 'ops', 'sql'))
         others_gen = list(search_files_in_folder(self.__etl_home + '/src', 'ops', 'hql'))
         all_sql_element = []
+        exception_list = []
         for stg_file_list in stg_file_gen:
             for stg_file in stg_file_list:
                 all_sql_element.append(FileElement(stg_file, self.__etl_home, self.__server_etl_home))
         for others_file_list in others_gen:
             for others_file in others_file_list:
-                all_sql_element.append(SQLElement(others_file, self.__etl_home, self.__server_etl_home, self.__alias_prefix))
+                try:
+                    all_sql_element.append(SQLElement(others_file, self.__etl_home, self.__server_etl_home, self.__alias_prefix))
+                except Exception as e:
+                    exception_list.append(e)
+        for exception in exception_list:
+            print(exception)
         
         tree = Tree(depth_limit_same_layer=self.__depth_limit)
         for node in all_sql_element:

@@ -1,6 +1,6 @@
 from etl.helper.utils import sql
 from etl.helper.utils.common.file_operation import read_txt
-from etl.helper.utils.sql.sql_analyzer import FunctionElement, TablePartition, TableType, analysis, scan_specific, items_select, ItemDuplicatedException, is_output, output_index
+from etl.helper.utils.sql.sql_analyzer import FunctionElement, TablePartition, TableType, analysis, scan_specific, items_select, ItemDuplicatedException, output_index
 from functools import reduce
 from enum import Enum
 import logging
@@ -179,15 +179,18 @@ class SQLElement(FileElement):
     def __get_meta_info(self):
         try:
             sql_text_list = self.get_sentences(remove_set_segment=True)
-            result = {TableType.INPUT:set(), TableType.OUTPUT:set()}
+            result = {TableType.INPUT:set(), TableType.OUTPUT:set(), 'output_sql':set()}
             for sql_single_sentence in sql_text_list :
-                meta_list = analysis(sql_single_sentence)
+                meta_list = analysis(sql_single_sentence, output_name = self.output_name.upper())
                 input_table_name_list = [tableItem[1] for tableItem in meta_list if tableItem[0] == TableType.INPUT]
                 output_table_name_list = [tableItem[1] for tableItem in meta_list if tableItem[0] == TableType.OUTPUT]
+                output_sql_list = [tableItem[1] for tableItem in meta_list if tableItem[0] == 'output_sql']
                 for input in input_table_name_list :
                     result[TableType.INPUT].add(input)
                 for output in output_table_name_list :
                     result[TableType.OUTPUT].add(output)
+                for output_sql in output_sql_list :
+                    result['output_sql'].add(output_sql)
 
             if(self.__check_output and self.output_name.upper() not in result[TableType.OUTPUT]):
                 logging.error('Table name and file name unmatched')
@@ -197,20 +200,25 @@ class SQLElement(FileElement):
             logging.error(self.path)
             raise
 
-    def __check_output_table_index(self):
-        output_sql_sentences = [sql for sql in self.get_sentences(remove_set_segment=True) if is_output(sql, self.output_name)]
-        self.__output_index_from_meta = self.__get_columns_from_meta()
+    def __check_output_table_index(self, output_sql_sentences):
+        meta_info = self.__get_columns_from_meta()
+        self.__output_index_from_meta = meta_info['physical']
+        self.__output_index_from_meta.extend(meta_info['partition'])
 
         for output_sql in output_sql_sentences:
-            self.__output_index_from_scan = output_index(output_sql, self.output_name)
-            if(self.__output_index_from_scan != self.__output_index_from_meta):
-                logging.error('Table construct columns index/count unmatched between metadata and running script')
-                raise TargetTableConstructIndexException('Table name: {0} / SQL path: {1} columns index/count unmatched {2} defined in metadata but {3} in running script'.format(self.output_name, self.path, self.__output_index_from_meta, self.__output_index_from_scan))
+            self.__output_index_from_scan = output_index(output_sql, output_name = self.output_name.upper())
+            for index_from_scan in self.__output_index_from_scan:
+                if(index_from_scan != self.__output_index_from_meta):
+                    logging.error('Table construct columns index/count unmatched between metadata and running script')
+                    raise TargetTableConstructIndexException('Table name: {} / SQL path: {} columns index/count unmatched {} defined in metadata but {} in running script'.format(self.output_name, self.path, self.__output_index_from_meta, index_from_scan))
             
     def __get_columns_from_meta(self):
         output_tables_info = self.output_name.split('.')
-        sql_text = 'SELECT t4.COLUMN_NAME FROM TBLS t1 INNER JOIN DBS t2 ON t1.DB_ID = t2.DB_ID INNER JOIN SDS t3 ON t1.SD_ID = t3.SD_ID INNER JOIN COLUMNS_V2 t4 ON t3.CD_ID = t4.CD_ID WHERE t2.NAME = \'{0}\' AND t1.TBL_NAME = \'{1}\' ORDER BY t4.INTEGER_IDX'.format(output_tables_info[0], output_tables_info[1])
-        return list(map(lambda item: item[0].upper(), mysql_ops.get_list(sql_text)))
+        sql_text_physical_columns = 'SELECT t4.COLUMN_NAME FROM TBLS t1 INNER JOIN DBS t2 ON t1.DB_ID = t2.DB_ID INNER JOIN SDS t3 ON t1.SD_ID = t3.SD_ID INNER JOIN COLUMNS_V2 t4 ON t3.CD_ID = t4.CD_ID WHERE t2.NAME = \'{0}\' AND t1.TBL_NAME = \'{1}\' ORDER BY t4.INTEGER_IDX'.format(output_tables_info[0], output_tables_info[1])
+        sql_text_partition_columns = 'SELECT PKEY_NAME FROM TBLS t1 INNER JOIN DBS t2 ON t1.DB_ID= t2.DB_ID JOIN hive.PARTITION_KEYS t3 ON t1.TBL_ID = t3.TBL_ID WHERE  t2.NAME=\'{0}\' AND t1.TBL_NAME = \'{1}\' ORDER BY t3.INTEGER_IDX'.format(output_tables_info[0], output_tables_info[1])
+        columns_index_physical = list(map(lambda item: item[0].upper(), mysql_ops.get_list(sql_text_physical_columns)))
+        columns_index_partition = list(map(lambda item: item[0].upper(), mysql_ops.get_list(sql_text_partition_columns)))
+        return {'physical':columns_index_physical, 'partition':columns_index_partition}
 
     def __get_name(self):
         return self.path.split('/')[-1].replace('.hql', '')
@@ -218,7 +226,7 @@ class SQLElement(FileElement):
     def __fill(self):        
         self.__name = self.__get_name()
         meta_data = self.__get_meta_info()
-        # self.__check_output_table_index()
+        self.__check_output_table_index(meta_data['output_sql'])
         self.__input = tuple(sorted(meta_data[TableType.INPUT]))
         self.__output = tuple(sorted(meta_data[TableType.OUTPUT]))
 
@@ -361,16 +369,49 @@ if __name__ == '__main__' :
     # print(sqlEle4.output)
 
     
-    # sqlEle5 = SQLElement('/home/sam/cheetah_etl/src/dm/ops/fct_itm_cost_price_summary_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
+    # sqlEle5 = SQLElement('/home/sam/cheetah_etl/src/dm/ops/fct_mbr_trf_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
     # print(sqlEle5)
     # print(sqlEle5.get_sentences(remove_set_segment=False))
     # print(sqlEle5.input)
     # print(sqlEle5.output)
 
+    # sqlEle5 = SQLElement('/home/sam/cheetah_etl/src/dm/ops/fct_stock_mov_cost_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
+    # print(sqlEle5)
+    # print(sqlEle5.get_sentences(remove_set_segment=False))
+    # print(sqlEle5.input)
+    # print(sqlEle5.output)
 
+    # sqlEle5 = SQLElement('/home/sam/cheetah_etl/src/ods/ops/sap_ep1_bseg.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
+    # print(sqlEle5)
+    # print(sqlEle5.get_sentences(remove_set_segment=False))
+    # print(sqlEle5.input)
+    # print(sqlEle5.output)
 
+    # sqlEle5 = SQLElement('/home/sam/cheetah_etl/src/ods/ops/sap_ep1_bseg.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
+    # print(sqlEle5)
+    # print(sqlEle5.get_sentences(remove_set_segment=False))
+    # print(sqlEle5.input)
+    # print(sqlEle5.output)
 
-    # sqlEle5 = SQLElement('/home/sam/cheetah_etl/src/ods/ops/mlp11_order_so_item.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
+    sqlEle5 = SQLElement('/home/sam/cheetah_etl/src/dm/ops/fct_stock_mov_cost_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
+    print(sqlEle5)
+    print(sqlEle5.get_sentences(remove_set_segment=False))
+    print(sqlEle5.input)
+    print(sqlEle5.output)
+
+    # sqlEle5 = SQLElement('/home/sam/cheetah_etl/src/dm/ops/itn_fct_trx_mbr_life_detail_di_repurchase.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
+    # print(sqlEle5)
+    # print(sqlEle5.get_sentences(remove_set_segment=False))
+    # print(sqlEle5.input)
+    # print(sqlEle5.output)
+
+    # sqlEle5 = SQLElement('/home/sam/cheetah_etl/src/dm/ops/fct_trx_mbr_ss_perform_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
+    # print(sqlEle5)
+    # print(sqlEle5.get_sentences(remove_set_segment=False))
+    # print(sqlEle5.input)
+    # print(sqlEle5.output)
+
+    # sqlEle5 = SQLElement('/home/sam/cheetah_etl/src/dm/ops/fct_order_tag_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
     # print(sqlEle5)
     # print(sqlEle5.get_sentences(remove_set_segment=False))
     # print(sqlEle5.input)
@@ -388,8 +429,8 @@ if __name__ == '__main__' :
     # print(scanEle1.output)
     
 
-    fileEle2 = STGElement('/home/sam/cheetah_etl/src/stg/ops/[sap].[ep1].[a809].sql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl')
-    print(fileEle2.is_same())
+    # fileEle2 = STGElement('/home/sam/cheetah_etl/src/stg/ops/[sap].[ep1].[a809].sql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl')
+    # print(fileEle2.is_same())
 
     # fileEle_list = [fileEle, fileEle2]
     # print('fileEle_list')
