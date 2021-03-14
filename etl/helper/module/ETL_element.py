@@ -196,7 +196,7 @@ class SQLElement(FileElement):
                 logging.error('Table name and file name unmatched')
                 # raise TargetTableException('Table name: {} should be included in output list. SQL path: {}'.format(self.output_name, self.path))
                 msg = 'Table name: {} should be included in output list. SQL path: {}'.format(self.output_name, self.path)
-                Messager.get_instance().raise_output_unmatched(msg)
+                Messager.get_instance().raise_output_unmatched(msg, self)
             return result
         except Exception:
             logging.error(self.path)
@@ -228,7 +228,7 @@ class SQLElement(FileElement):
     def __fill(self):        
         self.__name = self.__get_name()
         meta_data = self.__get_meta_info()
-        self.__check_output_table_index(meta_data['output_sql'])
+        # self.__check_output_table_index(meta_data['output_sql'])
         self.__input = tuple(sorted(meta_data[TableType.INPUT]))
         self.__output = tuple(sorted(meta_data[TableType.OUTPUT]))
 

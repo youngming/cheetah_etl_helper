@@ -105,7 +105,7 @@ class Tree(object):
         if(tree_node.element.path in self.__nodes):
             # raise TreeNodeDuplicateException('path: {} has existed in node list'.format(tree_node.element.path))
             msg = 'path: {} has existed in node list'.format(tree_node.element.path)
-            Messager.get_instance().raise_item_duplicated(msg)
+            Messager.get_instance().raise_item_duplicated(msg, self.__nodes[tree_node.element.path])
                 
         self.__nodes[tree_node.element.path] = tree_node
 

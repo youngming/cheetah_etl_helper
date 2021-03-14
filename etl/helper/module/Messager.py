@@ -7,9 +7,10 @@ class MessageBase(object):
     def __eq__(self, o: object) -> bool:
         return super().__eq__(o)
     
-    def __init__(self, level, summary, msg) -> None:
+    def __init__(self, level, summary, msg, raiser) -> None:
         super().__init__()
         self.__level = level
+        self.__raiser = raiser
         self.__summary = summary
         self.__message = msg
     
@@ -29,12 +30,16 @@ class MessageBase(object):
     def summary(self):
         return self.__summary
 
+    @property
+    def raiser(self):
+        return self.__raiser
+
     def __str__(self) -> str:
         return '<{0}>-<{1}>: {2}'.format(self.level.name, self.summary.name, self.message)
         
     __repr__ = __str__
 
-class Message(MessageBase):
+class ScanMessage(MessageBase):
     pass
 
 class MessageLevel(Enum):
@@ -99,20 +104,22 @@ class Messager(object):
     def level_messages(self, level):
         return list(filter(lambda message: message.level == level, self.messages))
 
-    def raise_item_duplicated(self, msg):
-        self.send(Message(MessageLevel.ERROR, MessageSummary.ItemDuplicated, msg))
+    def raise_item_duplicated(self, msg, raiser = None):
+        self.send(ScanMessage(MessageLevel.ERROR, MessageSummary.ItemDuplicated, msg, raiser))
     
-    def raise_output_unmatched(self, msg):
-        self.send(Message(MessageLevel.ERROR, MessageSummary.OutputTableNameUnmatched, msg))
+    def raise_output_unmatched(self, msg, raiser = None):
+        self.send(ScanMessage(MessageLevel.ERROR, MessageSummary.OutputTableNameUnmatched, msg, raiser))
     
-    def raise_reference_limited(self, msg):
-        self.send(Message(MessageLevel.ERROR, MessageSummary.ReferenceLimitationExceeded, msg))
+    def raise_reference_limited(self, msg, raiser = None):
+        self.send(ScanMessage(MessageLevel.ERROR, MessageSummary.ReferenceLimitationExceeded, msg, raiser))
     
-    def raise_insert_columns_unmatched_confirm(self, msg):
-        self.send(Message(MessageLevel.ERROR, MessageSummary.InsertTableColumnUnmatched, msg))
+    def raise_insert_columns_unmatched_confirm(self, msg, raiser = None):
+        self.send(ScanMessage(MessageLevel.ERROR, MessageSummary.InsertTableColumnUnmatched, msg, raiser))
 
-    def raise_insert_columns_unmatched_probably(self, msg):
-        self.send(Message(MessageLevel.WARNING, MessageSummary.InsertTableColumnUnmatched, msg))
+    def raise_insert_columns_unmatched_probably(self, msg, raiser = None):
+        self.send(ScanMessage(MessageLevel.WARNING, MessageSummary.InsertTableColumnUnmatched, msg, raiser))
+    
+
     
 if __name__ == '__main__':
     messager_get_from_instance = Messager.get_instance()

@@ -22,8 +22,6 @@ class MetaDataHelper(object):
             with MetaDataHelper._instance_lock:
                 if not hasattr(MetaDataHelper, "_instance"):
                     MetaDataHelper._instance = object.__new__(MetaDataHelper)
-                    # MetaDataHelper._instance.__physical_info = dict()
-                    # MetaDataHelper._instance.__partition_info = dict()
                     MetaDataHelper._instance.__fill()
                     
         return MetaDataHelper._instance
