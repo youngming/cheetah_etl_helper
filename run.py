@@ -17,4 +17,5 @@ if __name__ == '__main__':
 
     etl_scheduler = ETLScheduler(etl_home=etl_home_local ,depth_limit=depth_limit, server_etl_home=etl_home_server, alias_prefix=alias_prefix)
     etl_scheduler.scan_and_check()
+    etl_scheduler.checkout_messager()
     etl_scheduler.generate_output_files()

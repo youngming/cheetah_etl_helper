@@ -161,10 +161,14 @@ class ETLScheduler(object):
             # raise LayerReferenceDepthLimitationException(depth_exception_info)
             Messager.get_instance().raise_reference_limited(msg)
 
+    def checkout_messager(self):
+        Messager.get_instance().checkout(self.__etl_home + '/message.yml')
+
 if __name__ == '__main__':
     
     etl_scheduler = ETLScheduler(etl_home='/home/sam/cheetah_etl' ,depth_limit=1, server_etl_home='/home/sam/works/cheetah_etl', alias_prefix='mlp11,kfk')
     etl_scheduler.scan_and_check()
+    etl_scheduler.checkout_messager()
     tree = Tree()
     etl_scheduler.generate_output_files()
     

@@ -1,5 +1,11 @@
 from enum import Enum
 import threading
+import logging
+from etl.helper.utils.common.file_operation import delete_file
+import yaml
+
+class ScanErrorException(Exception):
+    pass
 
 # Message which can be sent/received from Messager base interface 
 class MessageBase(object):
@@ -119,6 +125,29 @@ class Messager(object):
     def raise_insert_columns_unmatched_probably(self, msg, raiser = None):
         self.send(ScanMessage(MessageLevel.WARNING, MessageSummary.InsertTableColumnUnmatched, msg, raiser))
     
+    def checkout(self, output_file):
+        self.__output_message(output_file, self.messages)
+        if(len(self.level_messages(MessageLevel.ERROR)) > 0):
+            raise ScanErrorException()
+
+    def __output_message(self, file_path, message_list):
+        msg_save = []
+        message_list.sort(key = lambda msg: msg.level.value)
+        for message in message_list:
+            raiser = ''
+            msg = message.message
+            logging.warning(message)
+
+            from etl.helper.module.ETL_element import ElementBase
+            if(message.raiser is not None and isinstance(message.raiser, ElementBase)):
+                raiser = message.raiser.path
+            msg_save.append('<{0}>-<{1}> raiser:{2} msg:{3}'.format(message.level.name, message.summary.name, raiser, msg))
+        
+        delete_file(file_path)
+        if(len(msg_save) > 0 ):
+            with open(file_path , 'w+') as yaml_writer:
+                yaml.dump(msg_save, yaml_writer)
+
 
     
 if __name__ == '__main__':
@@ -126,8 +155,8 @@ if __name__ == '__main__':
     messager_get_from_init = Messager()
     print(messager_get_from_instance == messager_get_from_init)
 
-    msg1 = Message(MessageLevel.ERROR, MessageSummary.InsertTableColumnUnmatched, 'msg1')
-    msg2 = Message(MessageLevel.WARNING, MessageSummary.OutputTableNameUnmatched, 'msg2')
+    msg1 = ScanMessage(MessageLevel.ERROR, MessageSummary.InsertTableColumnUnmatched, 'msg1', None)
+    msg2 = ScanMessage(MessageLevel.WARNING, MessageSummary.OutputTableNameUnmatched, 'msg2', None)
 
     messager_get_from_instance.send(msg1)
     messager_get_from_instance.send(msg2)

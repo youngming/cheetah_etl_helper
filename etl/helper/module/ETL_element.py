@@ -193,9 +193,9 @@ class SQLElement(FileElement):
                     result['output_sql'].add(output_sql)
 
             if(self.__check_output and self.output_name.upper() not in result[TableType.OUTPUT]):
-                logging.error('Table name and file name unmatched')
                 # raise TargetTableException('Table name: {} should be included in output list. SQL path: {}'.format(self.output_name, self.path))
                 msg = 'Table name: {} should be included in output list. SQL path: {}'.format(self.output_name, self.path)
+                logging.error(msg)
                 Messager.get_instance().raise_output_unmatched(msg, self)
             return result
         except Exception:
@@ -210,12 +210,14 @@ class SQLElement(FileElement):
         for output_sql in output_sql_sentences:
             self.__output_index_from_scan = output_index(output_sql, output_name = self.output_name.upper())
             for index_from_scan in self.__output_index_from_scan:
-                # TODO: check out confirmed and probably columns unmatched exception
                 if(index_from_scan != self.__output_index_from_meta):
-                    logging.error('Table construct columns index/count unmatched between metadata and running script')
-                    # raise TargetTableConstructIndexException('Table name: {} / SQL path: {} columns index/count unmatched {} defined in metadata but {} in running script'.format(self.output_name, self.path, self.__output_index_from_meta, index_from_scan))
-                    msg = 'Table name: {} / SQL path: {} columns index/count unmatched {} defined in metadata but {} in running script'.format(self.output_name, self.path, self.__output_index_from_meta, index_from_scan)
-                    Messager.get_instance().raise_insert_columns_unmatched_confirm(msg)
+                    logging.info('Table construct columns index/count unmatched between metadata and running script')
+                    msg = 'meta: {} script: {}'.format(self.__output_index_from_meta, index_from_scan)
+                    if(sorted(index_from_scan) == sorted(self.__output_index_from_meta)):
+                        # raise TargetTableConstructIndexException('Table name: {} / SQL path: {} columns index/count unmatched {} defined in metadata but {} in running script'.format(self.output_name, self.path, self.__output_index_from_meta, index_from_scan))
+                        Messager.get_instance().raise_insert_columns_unmatched_confirm(msg, self)
+                    else:
+                        Messager.get_instance().raise_insert_columns_unmatched_probably(msg, self)
             
     def __get_columns_from_meta(self):
         columns_index_physical = MetaDataHelper.get_instance().physical_columns(self.output_name)
@@ -228,7 +230,7 @@ class SQLElement(FileElement):
     def __fill(self):        
         self.__name = self.__get_name()
         meta_data = self.__get_meta_info()
-        # self.__check_output_table_index(meta_data['output_sql'])
+        self.__check_output_table_index(meta_data['output_sql'])
         self.__input = tuple(sorted(meta_data[TableType.INPUT]))
         self.__output = tuple(sorted(meta_data[TableType.OUTPUT]))
 

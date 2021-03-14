@@ -49,8 +49,8 @@ class MetaDataHelper(object):
     # Get only partition name info
     def partition_columns(self, table_name):
         # 0:database.table_name 1:column_name 2:column_type 3:column_index
-        if(table_name in self.__physical_info.keys()):
-            return [item[1].upper() for item in self.__partition_info[table_name] if table_name in self.__partition_info.keys()]
+        if(table_name in self.__partition_info.keys()):
+            return [item[1].upper() for item in self.__partition_info[table_name]]
         else:
             return []
 
