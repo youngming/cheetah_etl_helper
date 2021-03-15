@@ -165,7 +165,7 @@ class ETLScheduler(object):
         Messager.get_instance().checkout(self.__etl_home + '/message.yml')
 
 if __name__ == '__main__':
-    
+    Messager.get_instance().save_env('PRD')
     etl_scheduler = ETLScheduler(etl_home='/home/sam/cheetah_etl' ,depth_limit=1, server_etl_home='/home/sam/works/cheetah_etl', alias_prefix='mlp11,kfk')
     etl_scheduler.scan_and_check()
     etl_scheduler.checkout_messager()

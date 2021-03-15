@@ -48,6 +48,9 @@ class MessageBase(object):
 class ScanMessage(MessageBase):
     pass
 
+class InfoMessage(MessageBase):
+    pass
+
 class MessageLevel(Enum):
     ERROR=1
     WARNING=2
@@ -58,6 +61,7 @@ class MessageSummary(Enum):
     ReferenceLimitationExceeded=2
     OutputTableNameUnmatched=3
     InsertTableColumnUnmatched=4
+    Environment=500
 
 
 # Listerner base interface in Messager
@@ -125,6 +129,9 @@ class Messager(object):
     def raise_insert_columns_unmatched_probably(self, msg, raiser = None):
         self.send(ScanMessage(MessageLevel.WARNING, MessageSummary.InsertTableColumnUnmatched, msg, raiser))
     
+    def save_env(self, env):
+        self.send(InfoMessage(MessageLevel.INFO, MessageSummary.Environment, env, None))
+
     def checkout(self, output_file):
         self.__output_message(output_file, self.messages)
         if(len(self.level_messages(MessageLevel.ERROR)) > 0):
