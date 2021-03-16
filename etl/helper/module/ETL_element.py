@@ -124,10 +124,12 @@ class FileElement(ElementBase):
     def show_name(self):
         return self.layer.name + '.' + self.name
 
+    # Use on output database.tablename
     @property
     def output_name(self):
         return self.__get_output_name()
 
+    # Use on yml file output for router trace
     @property
     def reference_name(self):
         return self.__get_output_name()
@@ -209,15 +211,21 @@ class SQLElement(FileElement):
 
         for output_sql in output_sql_sentences:
             self.__output_index_from_scan = output_index(output_sql, output_name = self.output_name.upper())
+            total_section = len(self.__output_index_from_scan)
+            addition_msg = ''
+            scan_index = 0
             for index_from_scan in self.__output_index_from_scan:
+                scan_index = scan_index + 1
+                if(total_section > 1):
+                    addition_msg = 'section {0} of {1}'.format(scan_index, total_section)
                 if(index_from_scan != self.__output_index_from_meta):
                     logging.info('Table construct columns index/count unmatched between metadata and running script')
                     msg = 'meta: {} script: {}'.format(self.__output_index_from_meta, index_from_scan)
                     if(sorted(index_from_scan) == sorted(self.__output_index_from_meta)):
                         # raise TargetTableConstructIndexException('Table name: {} / SQL path: {} columns index/count unmatched {} defined in metadata but {} in running script'.format(self.output_name, self.path, self.__output_index_from_meta, index_from_scan))
-                        Messager.get_instance().raise_insert_columns_unmatched_confirm(msg, self)
+                        Messager.get_instance().raise_insert_columns_unmatched_confirm(msg, addition_info = addition_msg, raiser = self)
                     else:
-                        Messager.get_instance().raise_insert_columns_unmatched_probably(msg, self)
+                        Messager.get_instance().raise_insert_columns_unmatched_probably(msg, addition_info = addition_msg, raiser = self)
             
     def __get_columns_from_meta(self):
         columns_index_physical = MetaDataHelper.get_instance().physical_columns(self.output_name)
@@ -252,6 +260,7 @@ class SQLElement(FileElement):
     def output(self):
         return self.__output
 
+    # Use on output check
     @property
     def output_name(self):
         result = self.show_name.lower()
@@ -262,9 +271,19 @@ class SQLElement(FileElement):
                 result = result.replace(alias + '_', '')
             return result
     
+    # Use on relationship yml output for trace
     @property
     def reference_name(self):
         return self.show_name.lower()
+
+    def __eq__(self, other):
+        if(isinstance(other, SQLElement)):
+            return self.show_name == other.show_name
+        else:
+            return super().__eq__(other)
+    
+    def __hash__(self):
+        return super().__hash__()
 
 #Use on ods function / partition elements scan
 class ScanSQLElement(SQLElement):
@@ -339,6 +358,7 @@ class STGElement(FileElement):
     
 
 if __name__ == '__main__' :
+    Messager.get_instance().save_env('QAS')
     # fileEle = FileElement('/home/sam/cheetah_etl/src/stg/ops/[mdm].[hap_prd].[hmdm_md_attr_10002].sql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl')
     # print(fileEle)
     # # print(fileEle.get_sentences(remove_set_segment=True))
@@ -389,17 +409,24 @@ if __name__ == '__main__' :
     # print(sqlEle5.input)
     # print(sqlEle5.output)
 
-    sqlEle5 = SQLElement('/home/sam/cheetah_etl/src/ods/ops/sap_ep1_bseg.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
-    print(sqlEle5)
-    print(sqlEle5.get_sentences(remove_set_segment=False))
-    print(sqlEle5.input)
-    print(sqlEle5.output)
-
-    # sqlEle5 = SQLElement('/home/sam/cheetah_etl/src/dm/ops/fct_stock_mov_cost_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
+    # sqlEle5 = SQLElement('/home/sam/cheetah_etl/src/ods/ops/sap_ep1_bseg.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
     # print(sqlEle5)
     # print(sqlEle5.get_sentences(remove_set_segment=False))
     # print(sqlEle5.input)
     # print(sqlEle5.output)
+
+    # sqlEle5 = SQLElement('/home/sam/cheetah_etl/src/odh/ops/mlp_finance_fin_so.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
+    # print(sqlEle5)
+    # print(sqlEle5.get_sentences(remove_set_segment=False))
+    # print(sqlEle5.input)
+    # print(sqlEle5.output)
+
+    sqlEle5 = SQLElement('/home/sam/cheetah_etl/src/ods/ops/mlp_front_sns_merchant_product_comment.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
+    # print(sqlEle5)
+    # print(sqlEle5.get_sentences(remove_set_segment=False))
+    # print(sqlEle5.input)
+    # print(sqlEle5.output)
+    print(Messager.get_instance().messages)
 
     # sqlEle5 = SQLElement('/home/sam/cheetah_etl/src/dm/ops/itn_fct_trx_mbr_life_detail_di_repurchase.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
     # print(sqlEle5)

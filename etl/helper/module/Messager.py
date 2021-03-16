@@ -3,6 +3,8 @@ import threading
 import logging
 from etl.helper.utils.common.file_operation import delete_file
 import yaml
+from itertools import groupby
+
 
 class ScanErrorException(Exception):
     pass
@@ -13,12 +15,13 @@ class MessageBase(object):
     def __eq__(self, o: object) -> bool:
         return super().__eq__(o)
     
-    def __init__(self, level, summary, msg, raiser) -> None:
+    def __init__(self, level, summary, msg, addition_info, raiser) -> None:
         super().__init__()
         self.__level = level
         self.__raiser = raiser
         self.__summary = summary
         self.__message = msg
+        self.__addition_info = addition_info
     
     @property
     def level(self):
@@ -39,6 +42,10 @@ class MessageBase(object):
     @property
     def raiser(self):
         return self.__raiser
+
+    @property
+    def addition_info(self):
+        return self.__addition_info
 
     def __str__(self) -> str:
         return '<{0}>-<{1}>: {2}'.format(self.level.name, self.summary.name, self.message)
@@ -114,23 +121,23 @@ class Messager(object):
     def level_messages(self, level):
         return list(filter(lambda message: message.level == level, self.messages))
 
-    def raise_item_duplicated(self, msg, raiser = None):
-        self.send(ScanMessage(MessageLevel.ERROR, MessageSummary.ItemDuplicated, msg, raiser))
+    def raise_item_duplicated(self, msg, addition_info = '', raiser = None):
+        self.send(ScanMessage(MessageLevel.ERROR, MessageSummary.ItemDuplicated, msg, addition_info, raiser))
     
-    def raise_output_unmatched(self, msg, raiser = None):
-        self.send(ScanMessage(MessageLevel.ERROR, MessageSummary.OutputTableNameUnmatched, msg, raiser))
+    def raise_output_unmatched(self, msg, addition_info = '', raiser = None):
+        self.send(ScanMessage(MessageLevel.ERROR, MessageSummary.OutputTableNameUnmatched, msg, addition_info, raiser))
     
-    def raise_reference_limited(self, msg, raiser = None):
-        self.send(ScanMessage(MessageLevel.ERROR, MessageSummary.ReferenceLimitationExceeded, msg, raiser))
+    def raise_reference_limited(self, msg, addition_info = '', raiser = None):
+        self.send(ScanMessage(MessageLevel.ERROR, MessageSummary.ReferenceLimitationExceeded, msg, addition_info, raiser))
     
-    def raise_insert_columns_unmatched_confirm(self, msg, raiser = None):
-        self.send(ScanMessage(MessageLevel.ERROR, MessageSummary.InsertTableColumnUnmatched, msg, raiser))
+    def raise_insert_columns_unmatched_confirm(self, msg, addition_info = '', raiser = None):
+        self.send(ScanMessage(MessageLevel.ERROR, MessageSummary.InsertTableColumnUnmatched, msg, addition_info, raiser))
 
-    def raise_insert_columns_unmatched_probably(self, msg, raiser = None):
-        self.send(ScanMessage(MessageLevel.WARNING, MessageSummary.InsertTableColumnUnmatched, msg, raiser))
+    def raise_insert_columns_unmatched_probably(self, msg, addition_info = '', raiser = None):
+        self.send(ScanMessage(MessageLevel.WARNING, MessageSummary.InsertTableColumnUnmatched, msg, addition_info, raiser))
     
     def save_env(self, env):
-        self.send(InfoMessage(MessageLevel.INFO, MessageSummary.Environment, env, None))
+        self.send(InfoMessage(MessageLevel.INFO, MessageSummary.Environment, env, '', None))
 
     def checkout(self, output_file):
         self.__output_message(output_file, self.messages)
@@ -138,17 +145,43 @@ class Messager(object):
             raise ScanErrorException()
 
     def __output_message(self, file_path, message_list):
+        # Generate info print
+        info_messages = self.level_messages(MessageLevel.INFO)
+        for info_message in info_messages:
+            logging.warn('==============Info: {0} - {1}=============='.format(info_message.summary.name, info_message.message))
+
+
+        # Generate console output summary
+        error_messages = self.level_messages(MessageLevel.ERROR)
+        warning_messages = self.level_messages(MessageLevel.WARNING)
+        error_items = list([key for (key, data) in groupby(error_messages, key = lambda msg: msg.raiser) if key is not None])
+        warning_items = list([key for (key, data) in groupby(warning_messages, key = lambda msg: msg.raiser) if key is not None])
+        logging.warn('==============Total: {0} error in {1} raiser | {2} warning in {3} raiser=============='.format(len(error_messages), len(error_items), len(warning_messages), len(warning_items)))
+        
+        from etl.helper.module.ETL_element import ElementBase
+        for error_item in error_items:
+            if(isinstance(error_item, ElementBase)):
+                logging.warn('Error: {0}'.format(error_item.show_name))
+            else:
+                logging.warn('Error: {0}'.format(error_item))
+        
+        for warning_item in warning_items:
+            if(isinstance(warning_item, ElementBase)):
+                logging.warn('Warning: {0}'.format(warning_item.show_name))
+            else:
+                logging.warn('Warning: {0}'.format(warning_item))
+
+        # Generate output file
         msg_save = []
         message_list.sort(key = lambda msg: msg.level.value)
         for message in message_list:
             raiser = ''
             msg = message.message
-            logging.warning(message)
-
-            from etl.helper.module.ETL_element import ElementBase
+            addition_info = message.addition_info
+            # logging.warning(message)
             if(message.raiser is not None and isinstance(message.raiser, ElementBase)):
                 raiser = message.raiser.path
-            msg_save.append('<{0}>-<{1}> raiser:{2} msg:{3}'.format(message.level.name, message.summary.name, raiser, msg))
+            msg_save.append('<{0}>-<{1}> raiser:{2} {3} msg:{4}'.format(message.level.name, message.summary.name, raiser, addition_info, msg))
         
         delete_file(file_path)
         if(len(msg_save) > 0 ):
@@ -162,11 +195,14 @@ if __name__ == '__main__':
     messager_get_from_init = Messager()
     print(messager_get_from_instance == messager_get_from_init)
 
-    msg1 = ScanMessage(MessageLevel.ERROR, MessageSummary.InsertTableColumnUnmatched, 'msg1', None)
-    msg2 = ScanMessage(MessageLevel.WARNING, MessageSummary.OutputTableNameUnmatched, 'msg2', None)
+    msg1 = ScanMessage(MessageLevel.ERROR, MessageSummary.InsertTableColumnUnmatched, 'msg1', addition_info = 'add-msg1', raiser = '1')
+    msg2 = ScanMessage(MessageLevel.WARNING, MessageSummary.OutputTableNameUnmatched, 'msg2', addition_info = 'add-msg2', raiser = '1')
+    msg3 = ScanMessage(MessageLevel.ERROR, MessageSummary.InsertTableColumnUnmatched, 'msg3', addition_info = 'add-msg3', raiser = '1')
 
     messager_get_from_instance.send(msg1)
     messager_get_from_instance.send(msg2)
+
+    messager_get_from_init.checkout('/home/sam/cheetah_etl/xxx.yml')
 
     print(msg1.is_block)
     print(msg2.is_block)

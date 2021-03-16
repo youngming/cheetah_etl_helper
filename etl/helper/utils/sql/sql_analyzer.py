@@ -224,9 +224,23 @@ def __find_all_items_select_index(node_inputed, **kwargs):
                     result_once.extend(list(map(lambda identify_node: identify_node.getText(), __search_node_with_specific_type_only_in_child(__search_node_with_specific_type_only_in_child(select_exp, tokens.DOT)[0], tokens.IDENTIFY))))
                 else:
                     result_once.extend(list(map(lambda identify_node: identify_node.getText(), __search_node_with_specific_type(select_exp, tokens.IDENTIFY))))
+            if(__node_with_specific_type_existed(insert_node, tokens.TOK_PARTVAL)):
+                partition_val_nodes = list(__search_node_with_specific_type(insert_node, tokens.TOK_PARTVAL))
+                # Append the columns with partition column if there is partition (key = 'value')
+                # Append nothing if partititon only and without partition
+                partition_val_nodes = filter(lambda partition_val_node: __node_with_specific_type_existed_only_in_child(partition_val_node, tokens.VALUE), partition_val_nodes)
+                partition_val_identify_nodes = [__search_node_with_specific_type(partition_val_node, tokens.IDENTIFY) for partition_val_node in partition_val_nodes]
+                partition_val_identify_node_list = list()
+                for partition_val_identify_node in partition_val_identify_nodes:
+                    partition_val_identify_node_list.extend(list(partition_val_identify_node))
+                partition_columns = list([partition_val_identify.getText() for partition_val_identify in partition_val_identify_node_list])
+                # Append into above insert columns if UNION segement exists. But do not append insert columns in final insert segement
+                for partition_column in partition_columns:
+                    for result_item in result:
+                        if(partition_column not in result_item):
+                            result_item.append(partition_column)
             if(len(result_once) > 0):
                 result.append(result_once)
-        return result
     else:
         #Common insert from
         all_insert = __search_node_with_specific_type(node_inputed, tokens.TOK_INSERT)
@@ -250,8 +264,22 @@ def __find_all_items_select_index(node_inputed, **kwargs):
                             result_once.extend(list(map(lambda identify_node: identify_node.getText(), __search_node_with_specific_type_only_in_child(__search_node_with_specific_type_only_in_child(select_exp, tokens.DOT)[0], tokens.IDENTIFY))))
                         else:
                             result_once.extend(list(map(lambda identify_node: identify_node.getText(), __search_node_with_specific_type(select_exp, tokens.IDENTIFY))))
+                    
+                    if(__node_with_specific_type_existed(insert_node, tokens.TOK_PARTVAL)):
+                        partition_val_nodes = list(__search_node_with_specific_type(insert_node, tokens.TOK_PARTVAL))
+                        partition_val_nodes = filter(lambda partition_val_node: __node_with_specific_type_existed_only_in_child(partition_val_node, tokens.VALUE), partition_val_nodes)
+                        partition_val_identify_nodes = [__search_node_with_specific_type(partition_val_node, tokens.IDENTIFY) for partition_val_node in partition_val_nodes]
+                        partition_val_identify_node_list = list()
+                        for partition_val_identify_node in partition_val_identify_nodes:
+                            partition_val_identify_node_list.extend(list(partition_val_identify_node))
+                        partition_columns = list([partition_val_identify.getText() for partition_val_identify in partition_val_identify_node_list])
+                        for partition_column in partition_columns:
+                            if(partition_column not in result_once):
+                                result_once.append(partition_column)
+                    
                     result.append(result_once)
 
+    
     return result
 
 def __find_all_items_select(node_inputed):

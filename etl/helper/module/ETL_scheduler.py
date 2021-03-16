@@ -1,7 +1,7 @@
 from etl.helper.utils.common.file_operation import search_files_in_folder, delete_files_in_folders, delete_file
 from etl.helper.module.ETL_element import FileElement, SQLElement, Layer, STGElement, ScanSQLElement
 from etl.helper.module.Tree import TreeNode, Tree
-from etl.helper.module.Messager import Messager
+from etl.helper.module.Messager import MessageSummary, Messager
 import os
 from functools import reduce
 import logging
@@ -159,13 +159,13 @@ class ETLScheduler(object):
             logging.error('These reference are limitation exceeded {}'.format(depth_exception_info))
             msg = 'Reference in same layer limitation exceeded {0}'.format(depth_exception_info)
             # raise LayerReferenceDepthLimitationException(depth_exception_info)
-            Messager.get_instance().raise_reference_limited(msg)
+            Messager.get_instance().raise_reference_limited(msg, raiser=MessageSummary.ReferenceLimitationExceeded)
 
     def checkout_messager(self):
         Messager.get_instance().checkout(self.__etl_home + '/message.yml')
 
 if __name__ == '__main__':
-    Messager.get_instance().save_env('PRD')
+    Messager.get_instance().save_env('QAS')
     etl_scheduler = ETLScheduler(etl_home='/home/sam/cheetah_etl' ,depth_limit=1, server_etl_home='/home/sam/works/cheetah_etl', alias_prefix='mlp11,kfk')
     etl_scheduler.scan_and_check()
     etl_scheduler.checkout_messager()

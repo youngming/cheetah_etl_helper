@@ -31,7 +31,7 @@ class TreeNode(object):
             tree_node_set = tree_node
         
         for tree_node_item in tree_node_set:
-            if(self.__element != tree_node_item.element):
+            if(self.__element.output_name != tree_node_item.element.output_name):
                 self.__upstream.add(tree_node_item)
 
     def append_downstream(self, tree_node):
@@ -42,7 +42,7 @@ class TreeNode(object):
             tree_node_set = tree_node
 
         for tree_node_item in tree_node_set:
-            if(self.__element != tree_node_item.element):
+            if(self.__element.output_name != tree_node_item.element.output_name):
                 self.__downstream.add(tree_node_item)
 
     @property
@@ -54,7 +54,7 @@ class TreeNode(object):
         return sorted(self.__downstream)
 
     def __hash__(self):
-        return self.__element.__hash__()
+        return self.element.__hash__()
     
     def __eq__(self, other):
         if(isinstance(other, TreeNode)):
