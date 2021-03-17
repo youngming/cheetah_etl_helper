@@ -317,6 +317,8 @@ def __find_specific_elements(node_inputed):
 def __find_table_name(node_inputed, type_inputed = None, temporary_inputed = False, **kwargs):
     output_name = kwargs['output_name']
     sql_input = kwargs['sql']
+    path = kwargs['path']
+
     type = type_inputed
     is_temporary = temporary_inputed
     if(node_inputed.getType() in [tokens.TOK_CREATETABLE, tokens.TOK_INSERT]):
@@ -332,10 +334,10 @@ def __find_table_name(node_inputed, type_inputed = None, temporary_inputed = Fal
     
     # Check group by duplicated
     if(node_inputed.getType() == tokens.TOK_GROUPBY): 
-        __check_groupby_duplication(node_inputed, sql_input)
+        __check_groupby_duplication(node_inputed, sql_input, path)
     # Check select distince duplicated
     if(node_inputed.getType() == tokens.TOK_SELECTDI): 
-        __check_selectdi_duplication(node_inputed, sql_input)
+        __check_selectdi_duplication(node_inputed, sql_input, path)
 
     if(node_inputed.getType() == tokens.TOK_TABNAME):
         table_name = ''
@@ -355,7 +357,7 @@ def __find_table_name(node_inputed, type_inputed = None, temporary_inputed = Fal
             for child_node in child_nodes:
                 yield from __find_table_name(child_node, type, is_temporary, **kwargs)
 
-def __check_groupby_duplication(node_inputed, sql_input):
+def __check_groupby_duplication(node_inputed, sql_input, path):
     groupby_children_items = list(filter(lambda node: node.getType() != tokens.TOK_FUNCTION, node_inputed.children))
     group_input_size = len(groupby_children_items)
     group_item_s = set()
@@ -382,12 +384,12 @@ def __check_groupby_duplication(node_inputed, sql_input):
 
 
     if(group_input_size != len(group_item_s)): 
-        duplication_msg = '{} is duplicated inputed {} but {} actually. They are {}'.format(node_inputed.getText(), group_input_size, len(group_item_s), group_item_s)
+        duplication_msg = 'SQL: {0} in path: {1} duplicate inputed in {2}. There are {3} but {4} actually. They are {5}'.format(sql_input, path, node_inputed.getText(), group_input_size, len(group_item_s), group_item_s)
         # raise ItemDuplicatedException(duplication_msg)
-        Messager.get_instance().raise_item_duplicated(duplication_msg, sql_input)
+        Messager.get_instance().raise_item_duplicated(duplication_msg, addition_info = '', raiser = path)
         
 
-def __check_selectdi_duplication(node_inputed, sql_input): 
+def __check_selectdi_duplication(node_inputed, sql_input, path): 
     select_distinct_node_items = list(filter(lambda node: node.getFirstChildWithType(tokens.TOK_FUNCTION) == None , node_inputed.children))
     select_distinct_input_size = len(select_distinct_node_items)
     select_distinct_s = set()
@@ -416,9 +418,9 @@ def __check_selectdi_duplication(node_inputed, sql_input):
             select_distinct_s.add(tmp_select_distinct_column)
 
     if(select_distinct_input_size != len(select_distinct_s)): 
-        duplication_msg = '{} is duplicated inputed {} but {} actually. They are {}'.format(node_inputed.getText(), select_distinct_input_size, len(select_distinct_s), select_distinct_s)
+        duplication_msg = 'SQL: {0} in path: {1} duplicate inputed in {2}. There are {3} but {4} actually. They are {5}'.format(sql_input, path, node_inputed.getText(), select_distinct_input_size, len(select_distinct_s), select_distinct_s)
         # raise ItemDuplicatedException(duplication_msg)
-        Messager.get_instance().raise_item_duplicated(duplication_msg, sql_input)
+        Messager.get_instance().raise_item_duplicated(duplication_msg, addition_info = '', raiser = path)
 
 #Use on regular helper check. Input/Output list check and selectdistinct and groupby duplicate check
 def analysis(single_sql_sentence, **kwargs):

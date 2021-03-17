@@ -159,7 +159,7 @@ class ETLScheduler(object):
             logging.error('These reference are limitation exceeded {}'.format(depth_exception_info))
             msg = 'Reference in same layer limitation exceeded {0}'.format(depth_exception_info)
             # raise LayerReferenceDepthLimitationException(depth_exception_info)
-            Messager.get_instance().raise_reference_limited(msg, raiser=MessageSummary.ReferenceLimitationExceeded)
+            Messager.get_instance().raise_reference_limited(msg, raiser=MessageSummary.ReferenceLimitationExceeded.name)
 
     def checkout_messager(self):
         Messager.get_instance().checkout(self.__etl_home + '/message.yml')

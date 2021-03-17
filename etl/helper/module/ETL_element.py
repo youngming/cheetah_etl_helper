@@ -183,7 +183,7 @@ class SQLElement(FileElement):
             sql_text_list = self.get_sentences(remove_set_segment=True)
             result = {TableType.INPUT:set(), TableType.OUTPUT:set(), 'output_sql':set()}
             for sql_single_sentence in sql_text_list :
-                meta_list = analysis(sql_single_sentence, output_name = self.output_name.upper())
+                meta_list = analysis(sql_single_sentence, output_name = self.output_name.upper(), path = self.path)
                 input_table_name_list = [tableItem[1] for tableItem in meta_list if tableItem[0] == TableType.INPUT]
                 output_table_name_list = [tableItem[1] for tableItem in meta_list if tableItem[0] == TableType.OUTPUT]
                 output_sql_list = [tableItem[1] for tableItem in meta_list if tableItem[0] == 'output_sql']
@@ -198,7 +198,7 @@ class SQLElement(FileElement):
                 # raise TargetTableException('Table name: {} should be included in output list. SQL path: {}'.format(self.output_name, self.path))
                 msg = 'Table name: {} should be included in output list. SQL path: {}'.format(self.output_name, self.path)
                 logging.error(msg)
-                Messager.get_instance().raise_output_unmatched(msg, self)
+                Messager.get_instance().raise_output_unmatched(msg, addition_info = '', raiser=self)
             return result
         except Exception:
             logging.error(self.path)
@@ -421,7 +421,7 @@ if __name__ == '__main__' :
     # print(sqlEle5.input)
     # print(sqlEle5.output)
 
-    sqlEle5 = SQLElement('/home/sam/cheetah_etl/src/ods/ops/mlp_front_sns_merchant_product_comment.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
+    sqlEle5 = SQLElement('/home/sam/cheetah_etl/src/dm/ops/itn_fct_trx_mbr_life_detail_di_repurchase.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
     # print(sqlEle5)
     # print(sqlEle5.get_sentences(remove_set_segment=False))
     # print(sqlEle5.input)

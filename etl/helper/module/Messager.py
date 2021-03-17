@@ -49,11 +49,21 @@ class MessageBase(object):
 
     def __str__(self) -> str:
         return '<{0}>-<{1}>: {2}'.format(self.level.name, self.summary.name, self.message)
+
+    def __hash__(self) -> int:
+        return super().__hash__()
         
     __repr__ = __str__
 
 class ScanMessage(MessageBase):
-    pass
+    def __eq__(self, o: object) -> bool:
+        if(isinstance(o, ScanMessage)):
+            return o.raiser == self.raiser and o.summary == self.summary
+        else:
+            return super().__eq__(o)
+
+    def __hash__(self) -> int:
+        return hash(self.raiser) + hash(self.summary)
 
 class InfoMessage(MessageBase):
     pass
@@ -74,9 +84,7 @@ class MessageSummary(Enum):
 # Listerner base interface in Messager
 # Implement in feature on requirement
 class ListenerBase(object):
-    
-    def __eq__(self, o: object) -> bool:
-        return super().__eq__(o)
+    pass
 
 
 # Messager send/receive/listener management
@@ -148,28 +156,53 @@ class Messager(object):
         # Generate info print
         info_messages = self.level_messages(MessageLevel.INFO)
         for info_message in info_messages:
-            logging.warn('==============Info: {0} - {1}=============='.format(info_message.summary.name, info_message.message))
+            logging.warn('============== Info: {0} - {1} =============='.format(info_message.summary.name, info_message.message))
 
 
         # Generate console output summary
+        # Totaly message
         error_messages = self.level_messages(MessageLevel.ERROR)
         warning_messages = self.level_messages(MessageLevel.WARNING)
+        
+        # All message aggregated in raiser with SET data struct (merge the same raiser's message on equals and hash method)
+        raiser_error_mapping = {raiser:set(messageList) for (raiser, messageList) in groupby(error_messages, key = lambda msg: msg.raiser) if raiser is not None}
+        raiser_warning_mapping = {raiser:set(messageList) for (raiser, messageList) in groupby(warning_messages, key = lambda msg: msg.raiser) if raiser is not None}
+        
+        # All message aggregated in raiser with LIST data struct (do not merge the message)
+        raiser_error_mapping_list = {raiser:list(messageList) for (raiser, messageList) in groupby(error_messages, key = lambda msg: msg.raiser) if raiser is not None}
+        raiser_warning_mapping_list = {raiser:list(messageList) for (raiser, messageList) in groupby(warning_messages, key = lambda msg: msg.raiser) if raiser is not None}
+        
+        # All raiser list (merge the same raiser's message to one)
         error_items = list([key for (key, data) in groupby(error_messages, key = lambda msg: msg.raiser) if key is not None])
         warning_items = list([key for (key, data) in groupby(warning_messages, key = lambda msg: msg.raiser) if key is not None])
-        logging.warn('==============Total: {0} error in {1} raiser | {2} warning in {3} raiser=============='.format(len(error_messages), len(error_items), len(warning_messages), len(warning_items)))
+        
+        s_error = ''
+        s_warning = ''
+        if(len(error_items) > 1):
+            s_error = 's'
+        if(len(warning_items)):
+            s_warning = 's'
+
+        logging.warn('============== Total: {0} error in {1} raiser{4}  |  {2} warning in {3} raiser{5} =============='.format(len(error_messages), len(error_items), len(warning_messages), len(warning_items), s_error, s_warning))
         
         from etl.helper.module.ETL_element import ElementBase
         for error_item in error_items:
+            raiser_name = ''
             if(isinstance(error_item, ElementBase)):
-                logging.warn('Error: {0}'.format(error_item.show_name))
+                raiser_name = error_item.show_name
             else:
-                logging.warn('Error: {0}'.format(error_item))
-        
+                raiser_name = error_item
+            
+            logging.warn('Error: {0}-{1} ({2})'.format('/'.join([msg.summary.name for msg in raiser_error_mapping[error_item]]), raiser_name, len(raiser_error_mapping_list[error_item])))
+
         for warning_item in warning_items:
+            raiser_name = ''
             if(isinstance(warning_item, ElementBase)):
-                logging.warn('Warning: {0}'.format(warning_item.show_name))
+                raiser_name = warning_item.show_name
             else:
-                logging.warn('Warning: {0}'.format(warning_item))
+                raiser_name = warning_item
+
+            logging.warn('Warning: {0}-{1} ({2})'.format('/'.join([msg.summary.name for msg in raiser_warning_mapping[warning_item]]), raiser_name, len(raiser_warning_mapping_list[warning_item])))
 
         # Generate output file
         msg_save = []
@@ -181,6 +214,8 @@ class Messager(object):
             # logging.warning(message)
             if(message.raiser is not None and isinstance(message.raiser, ElementBase)):
                 raiser = message.raiser.path
+            elif(message.raiser is not None):
+                raiser = message.raiser
             msg_save.append('<{0}>-<{1}> raiser:{2} {3} msg:{4}'.format(message.level.name, message.summary.name, raiser, addition_info, msg))
         
         delete_file(file_path)
