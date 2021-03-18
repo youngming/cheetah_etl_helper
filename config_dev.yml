@@ -1,0 +1,6 @@
+mysql:
+  host: 10.224.24.164
+  port: 3306
+  user: hive
+  password: hive@A123
+  database: hive

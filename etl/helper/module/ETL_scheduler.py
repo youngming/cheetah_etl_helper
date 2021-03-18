@@ -1,6 +1,7 @@
 from etl.helper.utils.common.file_operation import search_files_in_folder, delete_files_in_folders, delete_file
 from etl.helper.module.ETL_element import FileElement, SQLElement, Layer, STGElement, ScanSQLElement
 from etl.helper.module.Tree import TreeNode, Tree
+from etl.helper.module.Messager import MessageSummary, Messager
 import os
 from functools import reduce
 import logging
@@ -12,8 +13,8 @@ class ArgumentMissingException(Exception):
     pass
 
 #Throw this exception when same layer reference exceeded the limit
-class LayerReferenceDepthLimitationException(Exception):
-    pass
+# class LayerReferenceDepthLimitationException(Exception):
+#     pass
 
 class ETLScheduler(object):
 
@@ -51,7 +52,7 @@ class ETLScheduler(object):
         for others_file_list in others_gen:
             for others_file in others_file_list:
                 all_sql_element.append(SQLElement(others_file, self.__etl_home, self.__server_etl_home, self.__alias_prefix))
-        
+
         tree = Tree(depth_limit_same_layer=self.__depth_limit)
         for node in all_sql_element:
             tree.append_node(TreeNode(node))
@@ -156,14 +157,18 @@ class ETLScheduler(object):
         depth_exception_info = self.tree.check_depth()
         if(depth_exception_info != None and len(depth_exception_info) > 0):
             logging.error('These reference are limitation exceeded {}'.format(depth_exception_info))
-            raise LayerReferenceDepthLimitationException(depth_exception_info)
+            msg = 'Reference in same layer limitation exceeded {0}'.format(depth_exception_info)
+            # raise LayerReferenceDepthLimitationException(depth_exception_info)
+            Messager.get_instance().raise_reference_limited(msg, raiser=MessageSummary.ReferenceLimitationExceeded.name)
 
-
+    def checkout_messager(self):
+        Messager.get_instance().checkout(self.__etl_home + '/message.yml')
 
 if __name__ == '__main__':
-    
+    Messager.get_instance().save_env('QAS')
     etl_scheduler = ETLScheduler(etl_home='/home/sam/cheetah_etl' ,depth_limit=1, server_etl_home='/home/sam/works/cheetah_etl', alias_prefix='mlp11,kfk')
     etl_scheduler.scan_and_check()
+    etl_scheduler.checkout_messager()
     tree = Tree()
     etl_scheduler.generate_output_files()
     

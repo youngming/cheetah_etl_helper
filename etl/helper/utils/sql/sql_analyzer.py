@@ -7,7 +7,10 @@ jnius_config.set_classpath(file_abs_path + '/grammar/sql-grammar.jar',file_abs_p
 import jnius
 from enum import Enum
 from functools import reduce
+from itertools import groupby
+from operator import itemgetter
 from etl.helper.utils.sql import tokens
+from etl.helper.module.Messager import Messager
 StringStream = jnius.autoclass('org.antlr.runtime.ANTLRStringStream')
 Lexer  = jnius.autoclass('grammar.HiveLexer')
 Parser  = jnius.autoclass('grammar.HiveParser')
@@ -127,8 +130,8 @@ class FunctionElement(object):
         return {'function_name':self.function_name, 'source_columns':list(self.source_column), 'alias_name':self.alias_name, 'expression':self.expression()}
             
 
-class ItemDuplicatedException(Exception):
-    pass
+# class ItemDuplicatedException(Exception):
+#     pass
 
 def __walktree(node,depth = 0):
     print("%s%s=%s" % (str(depth) + "  "*depth,node.getText(),node.getType()))
@@ -146,7 +149,17 @@ def __search_node_with_specific_type(node_inputed, specific_type):
     elif(node_inputed.children != None):
         for node_child in node_inputed.children:
             yield from __search_node_with_specific_type(node_child, specific_type)
-        
+
+def __search_node_with_specific_type_with_depth(node_inputed, specific_type, depth = 0):
+    depthinner = depth
+    if(node_inputed.getType() == specific_type):
+        yield (node_inputed, depthinner)
+        depth = 0
+    elif(node_inputed.children != None):
+        depthinner += 1
+        for node_child in node_inputed.children:
+            yield from __search_node_with_specific_type_with_depth(node_child, specific_type, depthinner)
+
 def __search_node_with_specific_type_only_in_child(node_inputed, specific_type):
     if(node_inputed.children != None):
         return list(filter(lambda child_node: child_node.getType() == specific_type, node_inputed.children))
@@ -206,11 +219,91 @@ def __generator_function(node_func_parent, index = 0, parent_function_name = Non
 
     return function
 
+def __find_all_items_select_index(node_inputed, **kwargs):
+    output_name = kwargs['output_name']
+    result = []
+
+    if(__node_with_specific_type_existed(node_inputed, tokens.TOK_ALLCOLREF)):
+        #Insert from a union all segement
+        all_insert_with_depth = list(__search_node_with_specific_type_with_depth(node_inputed, tokens.TOK_INSERT))
+        depth_key_insert_list = {key:list(insert_node_tuple) for (key, insert_node_tuple) in groupby(sorted(all_insert_with_depth, key = lambda insert_tuple: insert_tuple[1]), key = lambda insert_tuple: insert_tuple[1])}
+        all_insert = list()
+        if(len(depth_key_insert_list) > 1):
+            min_key = sorted(depth_key_insert_list.keys())[1]
+            all_insert.extend([insert_node[0] for insert_node in depth_key_insert_list[min_key]])
+
+        for insert_node in all_insert:
+            result_once = []
+            select_exp_list = __search_node_with_specific_type(insert_node, tokens.TOK_SELEXPR)
+            for select_exp in select_exp_list:
+                if(__node_with_specific_type_existed_only_in_child(select_exp, tokens.IDENTIFY)):
+                    result_once.extend(list(map(lambda identify_node : identify_node.getText(), __search_node_with_specific_type_only_in_child(select_exp, tokens.IDENTIFY))))
+                elif(__node_with_specific_type_existed_only_in_child(select_exp, tokens.DOT)):
+                    result_once.extend(list(map(lambda identify_node: identify_node.getText(), __search_node_with_specific_type_only_in_child(__search_node_with_specific_type_only_in_child(select_exp, tokens.DOT)[0], tokens.IDENTIFY))))
+                else:
+                    result_once.extend(list(map(lambda identify_node: identify_node.getText(), __search_node_with_specific_type(select_exp, tokens.IDENTIFY))))
+            if(__node_with_specific_type_existed(insert_node, tokens.TOK_PARTVAL)):
+                partition_val_nodes = list(__search_node_with_specific_type(insert_node, tokens.TOK_PARTVAL))
+                # Append the columns with partition column if there is partition (key = 'value')
+                # Append nothing if partititon only and without partition
+                partition_val_nodes = filter(lambda partition_val_node: __node_with_specific_type_existed_only_in_child(partition_val_node, tokens.VALUE), partition_val_nodes)
+                partition_val_identify_nodes = [__search_node_with_specific_type(partition_val_node, tokens.IDENTIFY) for partition_val_node in partition_val_nodes]
+                partition_val_identify_node_list = list()
+                for partition_val_identify_node in partition_val_identify_nodes:
+                    partition_val_identify_node_list.extend(list(partition_val_identify_node))
+                partition_columns = list([partition_val_identify.getText() for partition_val_identify in partition_val_identify_node_list])
+                # Append into above insert columns if UNION segement exists. But do not append insert columns in final insert segement
+                for partition_column in partition_columns:
+                    for result_item in result:
+                        if(partition_column not in result_item):
+                            result_item.append(partition_column)
+            if(len(result_once) > 0):
+                result.append(result_once)
+    else:
+        #Common insert from
+        all_insert = __search_node_with_specific_type(node_inputed, tokens.TOK_INSERT)
+        for insert_node in all_insert:
+            table_name_nodes = list(__search_node_with_specific_type(insert_node, tokens.TOK_TABNAME))
+            table_name = ''
+            result_once = []
+            if(len(table_name_nodes) == 1):
+                table_name_text_nodes = table_name_nodes[0].children
+                if(len(table_name_text_nodes) == 1):
+                    table_name = table_name_text_nodes[0].getText()
+                else:
+                    table_name = reduce(lambda t1, t2: t1.getText() + '.' + t2.getText(), table_name_text_nodes)
+                
+                if(table_name == output_name):
+                    select_exp_list = __search_node_with_specific_type(insert_node, tokens.TOK_SELEXPR)
+                    for select_exp in select_exp_list:
+                        if(__node_with_specific_type_existed_only_in_child(select_exp, tokens.IDENTIFY)):
+                            result_once.extend(list(map(lambda identify_node : identify_node.getText(), __search_node_with_specific_type_only_in_child(select_exp, tokens.IDENTIFY))))
+                        elif(__node_with_specific_type_existed_only_in_child(select_exp, tokens.DOT)):
+                            result_once.extend(list(map(lambda identify_node: identify_node.getText(), __search_node_with_specific_type_only_in_child(__search_node_with_specific_type_only_in_child(select_exp, tokens.DOT)[0], tokens.IDENTIFY))))
+                        else:
+                            result_once.extend(list(map(lambda identify_node: identify_node.getText(), __search_node_with_specific_type(select_exp, tokens.IDENTIFY))))
+                    
+                    if(__node_with_specific_type_existed(insert_node, tokens.TOK_PARTVAL)):
+                        partition_val_nodes = list(__search_node_with_specific_type(insert_node, tokens.TOK_PARTVAL))
+                        partition_val_nodes = filter(lambda partition_val_node: __node_with_specific_type_existed_only_in_child(partition_val_node, tokens.VALUE), partition_val_nodes)
+                        partition_val_identify_nodes = [__search_node_with_specific_type(partition_val_node, tokens.IDENTIFY) for partition_val_node in partition_val_nodes]
+                        partition_val_identify_node_list = list()
+                        for partition_val_identify_node in partition_val_identify_nodes:
+                            partition_val_identify_node_list.extend(list(partition_val_identify_node))
+                        partition_columns = list([partition_val_identify.getText() for partition_val_identify in partition_val_identify_node_list])
+                        for partition_column in partition_columns:
+                            if(partition_column not in result_once):
+                                result_once.append(partition_column)
+                    
+                    result.append(result_once)
+
+    
+    return result
+
 def __find_all_items_select(node_inputed):
     node_select = list(__search_node_with_specific_type(node_inputed, tokens.TOK_SELECT))
     if(len(list(node_select)) == 1):
         return list(map(lambda item_node: item_node.getText().upper(), __search_node_with_specific_type(list(node_select)[0], tokens.IDENTIFY)))
-        
 
 def __find_specific_elements(node_inputed):
     if(node_inputed.getType() == tokens.TOK_INSERT and __node_with_specific_type_existed(node_inputed, tokens.TOK_PARTSPEC)):
@@ -239,7 +332,11 @@ def __find_specific_elements(node_inputed):
             for node_child in node_inputed.children:
                 yield from __find_specific_elements(node_child) 
 
-def __find_table_name(node_inputed, type_inputed = None, temporary_inputed = False):
+def __find_table_name(node_inputed, type_inputed = None, temporary_inputed = False, **kwargs):
+    output_name = kwargs['output_name']
+    sql_input = kwargs['sql']
+    path = kwargs['path']
+
     type = type_inputed
     is_temporary = temporary_inputed
     if(node_inputed.getType() in [tokens.TOK_CREATETABLE, tokens.TOK_INSERT]):
@@ -255,25 +352,30 @@ def __find_table_name(node_inputed, type_inputed = None, temporary_inputed = Fal
     
     # Check group by duplicated
     if(node_inputed.getType() == tokens.TOK_GROUPBY): 
-        __check_groupby_duplication(node_inputed)
+        __check_groupby_duplication(node_inputed, sql_input, path)
     # Check select distince duplicated
     if(node_inputed.getType() == tokens.TOK_SELECTDI): 
-        __check_selectdi_duplication(node_inputed)
+        __check_selectdi_duplication(node_inputed, sql_input, path)
 
     if(node_inputed.getType() == tokens.TOK_TABNAME):
+        table_name = ''
         table_name_nodes = node_inputed.children
         if(len(table_name_nodes) == 1):
-            yield (type, table_name_nodes[0].getText(), is_temporary)
+            table_name = table_name_nodes[0].getText()
         else:
-            yield (type, reduce(lambda t1, t2: t1.getText() + '.' + t2.getText(), table_name_nodes), is_temporary)
+            table_name = reduce(lambda t1, t2: t1.getText() + '.' + t2.getText(), table_name_nodes)
+
+        if(type == TableType.OUTPUT and table_name == output_name):
+            yield ('output_sql', sql_input)
+        yield (type, table_name, is_temporary)
         
     else:
         child_nodes = node_inputed.children
         if(child_nodes != None):
             for child_node in child_nodes:
-                yield from __find_table_name(child_node, type, is_temporary)
+                yield from __find_table_name(child_node, type, is_temporary, **kwargs)
 
-def __check_groupby_duplication(node_inputed):
+def __check_groupby_duplication(node_inputed, sql_input, path):
     groupby_children_items = list(filter(lambda node: node.getType() != tokens.TOK_FUNCTION, node_inputed.children))
     group_input_size = len(groupby_children_items)
     group_item_s = set()
@@ -300,10 +402,12 @@ def __check_groupby_duplication(node_inputed):
 
 
     if(group_input_size != len(group_item_s)): 
-        duplication_msg = '{} is duplicated inputed {} but {} actually. They are {}'.format(node_inputed.getText(), group_input_size, len(group_item_s), group_item_s)
-        raise ItemDuplicatedException(duplication_msg)     
+        duplication_msg = 'SQL: {0} in path: {1} duplicate inputed in {2}. There are {3} but {4} actually. They are {5}'.format(sql_input, path, node_inputed.getText(), group_input_size, len(group_item_s), group_item_s)
+        # raise ItemDuplicatedException(duplication_msg)
+        Messager.get_instance().raise_item_duplicated(duplication_msg, addition_info = '', raiser = path)
+        
 
-def __check_selectdi_duplication(node_inputed): 
+def __check_selectdi_duplication(node_inputed, sql_input, path): 
     select_distinct_node_items = list(filter(lambda node: node.getFirstChildWithType(tokens.TOK_FUNCTION) == None , node_inputed.children))
     select_distinct_input_size = len(select_distinct_node_items)
     select_distinct_s = set()
@@ -332,22 +436,27 @@ def __check_selectdi_duplication(node_inputed):
             select_distinct_s.add(tmp_select_distinct_column)
 
     if(select_distinct_input_size != len(select_distinct_s)): 
-        duplication_msg = '{} is duplicated inputed {} but {} actually. They are {}'.format(node_inputed.getText(), select_distinct_input_size, len(select_distinct_s), select_distinct_s)
-        raise ItemDuplicatedException(duplication_msg)     
+        duplication_msg = 'SQL: {0} in path: {1} duplicate inputed in {2}. There are {3} but {4} actually. They are {5}'.format(sql_input, path, node_inputed.getText(), select_distinct_input_size, len(select_distinct_s), select_distinct_s)
+        # raise ItemDuplicatedException(duplication_msg)
+        Messager.get_instance().raise_item_duplicated(duplication_msg, addition_info = '', raiser = path)
 
 #Use on regular helper check. Input/Output list check and selectdistinct and groupby duplicate check
-def analysis(single_sql_sentence):
-    return __analysis_function(single_sql_sentence, __find_table_name)
+def analysis(single_sql_sentence, **kwargs):
+    kwargs.update({'sql': single_sql_sentence})
+    return __analysis_function(single_sql_sentence, __find_table_name, show_tree = False, **kwargs)
+
+def output_index(single_sql_sentence, **kwargs):
+    return __analysis_function(single_sql_sentence, __find_all_items_select_index, show_tree = False, **kwargs)
 
 #Use on ods function and partition scan only use once
 def scan_specific(single_sql_sentence):
-    return __analysis_function(single_sql_sentence, __find_specific_elements)
+    return __analysis_function(single_sql_sentence, __find_specific_elements, show_tree = False)
 
 #Use on stg select item order and content check between stg ops and table init script use once
 def items_select(single_sql_sentence):
-    return __analysis_function(single_sql_sentence, __find_all_items_select)
+    return __analysis_function(single_sql_sentence, __find_all_items_select, show_tree = False)
 
-def __analysis_function(single_sql_sentence, analysis_function):
+def __analysis_function(single_sql_sentence, analysis_function, show_tree = False, **kwargs):
     try:
         logging.info(single_sql_sentence)
         sql_string = single_sql_sentence.upper()
@@ -357,8 +466,9 @@ def __analysis_function(single_sql_sentence, analysis_function):
         parser = Parser(ts)
         ret  = parser.statement()
         treeroot = ret.getTree()
-        # __walktree(treeroot)
-        return [analysis_result for analysis_result in analysis_function(treeroot)]
+        if(show_tree):
+            __walktree(treeroot)
+        return [analysis_result for analysis_result in analysis_function(treeroot, **kwargs)]
     except Exception:
         logging.error(single_sql_sentence)
         raise

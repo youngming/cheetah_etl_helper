@@ -1,10 +1,11 @@
 from etl.helper.module.ETL_element import ElementBase, FileElement, SQLElement
 import threading
 import logging
+from etl.helper.module.Messager import Messager
 
 #Throw this exception when same tree node be inputed into tree more than once
-class TreeNodeDuplicateException(Exception):
-    pass
+# class TreeNodeDuplicateException(Exception):
+#     pass
 
 class TreeNode(object):
     def __init__(self, etl_element):
@@ -22,14 +23,6 @@ class TreeNode(object):
     def element(self):
         return self.__element
 
-    @property
-    def upstream(self):
-        return self.__upstream
-
-    @property
-    def downstream(self):
-        return self.__downstream
-
     def append_upstream(self, tree_node):
         if(isinstance(tree_node, TreeNode)):
             tree_node_set = set()
@@ -38,7 +31,7 @@ class TreeNode(object):
             tree_node_set = tree_node
         
         for tree_node_item in tree_node_set:
-            if(self.__element != tree_node_item.element):
+            if(self.__element.output_name != tree_node_item.element.output_name):
                 self.__upstream.add(tree_node_item)
 
     def append_downstream(self, tree_node):
@@ -49,7 +42,7 @@ class TreeNode(object):
             tree_node_set = tree_node
 
         for tree_node_item in tree_node_set:
-            if(self.__element != tree_node_item.element):
+            if(self.__element.output_name != tree_node_item.element.output_name):
                 self.__downstream.add(tree_node_item)
 
     @property
@@ -61,7 +54,7 @@ class TreeNode(object):
         return sorted(self.__downstream)
 
     def __hash__(self):
-        return self.__element.__hash__()
+        return self.element.__hash__()
     
     def __eq__(self, other):
         if(isinstance(other, TreeNode)):
@@ -110,7 +103,9 @@ class Tree(object):
     def append_node(self, tree_node):
         #Raise an exception when push a same tree node in(same element)
         if(tree_node.element.path in self.__nodes):
-            raise TreeNodeDuplicateException('path: {} has existed in node list'.format(tree_node.element.path))
+            # raise TreeNodeDuplicateException('path: {} has existed in node list'.format(tree_node.element.path))
+            msg = 'path: {} has existed in node list'.format(tree_node.element.path)
+            Messager.get_instance().raise_item_duplicated(msg, addition_info = '', raiser = self.__nodes[tree_node.element.path])
                 
         self.__nodes[tree_node.element.path] = tree_node
 
