@@ -7,6 +7,8 @@ jnius_config.set_classpath(file_abs_path + '/grammar/sql-grammar.jar',file_abs_p
 import jnius
 from enum import Enum
 from functools import reduce
+from itertools import groupby
+from operator import itemgetter
 from etl.helper.utils.sql import tokens
 from etl.helper.module.Messager import Messager
 StringStream = jnius.autoclass('org.antlr.runtime.ANTLRStringStream')
@@ -147,7 +149,17 @@ def __search_node_with_specific_type(node_inputed, specific_type):
     elif(node_inputed.children != None):
         for node_child in node_inputed.children:
             yield from __search_node_with_specific_type(node_child, specific_type)
-        
+
+def __search_node_with_specific_type_with_depth(node_inputed, specific_type, depth = 0):
+    depthinner = depth
+    if(node_inputed.getType() == specific_type):
+        yield (node_inputed, depthinner)
+        depth = 0
+    elif(node_inputed.children != None):
+        depthinner += 1
+        for node_child in node_inputed.children:
+            yield from __search_node_with_specific_type_with_depth(node_child, specific_type, depthinner)
+
 def __search_node_with_specific_type_only_in_child(node_inputed, specific_type):
     if(node_inputed.children != None):
         return list(filter(lambda child_node: child_node.getType() == specific_type, node_inputed.children))
@@ -213,7 +225,13 @@ def __find_all_items_select_index(node_inputed, **kwargs):
 
     if(__node_with_specific_type_existed(node_inputed, tokens.TOK_ALLCOLREF)):
         #Insert from a union all segement
-        all_insert = __search_node_with_specific_type(node_inputed, tokens.TOK_INSERT)
+        all_insert_with_depth = list(__search_node_with_specific_type_with_depth(node_inputed, tokens.TOK_INSERT))
+        depth_key_insert_list = {key:list(insert_node_tuple) for (key, insert_node_tuple) in groupby(sorted(all_insert_with_depth, key = lambda insert_tuple: insert_tuple[1]), key = lambda insert_tuple: insert_tuple[1])}
+        all_insert = list()
+        if(len(depth_key_insert_list) > 1):
+            min_key = sorted(depth_key_insert_list.keys())[1]
+            all_insert.extend([insert_node[0] for insert_node in depth_key_insert_list[min_key]])
+
         for insert_node in all_insert:
             result_once = []
             select_exp_list = __search_node_with_specific_type(insert_node, tokens.TOK_SELEXPR)

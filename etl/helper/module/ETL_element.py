@@ -421,7 +421,7 @@ if __name__ == '__main__' :
     # print(sqlEle5.input)
     # print(sqlEle5.output)
 
-    sqlEle5 = SQLElement('/home/sam/cheetah_etl/src/dm/ops/itn_fct_trx_mbr_life_detail_di_repurchase.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
+    sqlEle5 = SQLElement('/home/sam/cheetah_etl/src/ods/ops/api_cheetah_fht_fct_mbr_wx_event_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
     # print(sqlEle5)
     # print(sqlEle5.get_sentences(remove_set_segment=False))
     # print(sqlEle5.input)
