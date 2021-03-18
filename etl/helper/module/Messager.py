@@ -4,6 +4,7 @@ import logging
 from etl.helper.utils.common.file_operation import delete_file
 import yaml
 from itertools import groupby
+from distutils.util import strtobool
 
 
 class ScanErrorException(Exception):
@@ -72,6 +73,7 @@ class MessageLevel(Enum):
     ERROR=1
     WARNING=2
     INFO=3
+    NOTIFY_RECOMMEND=4
 
 class MessageSummary(Enum):
     ItemDuplicated=1
@@ -79,6 +81,9 @@ class MessageSummary(Enum):
     OutputTableNameUnmatched=3
     InsertTableColumnUnmatched=4
     Environment=500
+    Notify_depth_limit_identify=700
+    Notify_ignore_error_check=701
+    Notify_ignore_warning_check=702
 
 
 # Listerner base interface in Messager
@@ -119,7 +124,13 @@ class Messager(object):
         pass
 
     # Save and send a message
-    def send(self, message):
+    def __send(self, message):
+        from etl.helper.module.ETL_element import FileElement
+        if isinstance(message.raiser, FileElement):
+            if(message.level == MessageLevel.ERROR and 'ignore_error_check' in message.raiser.header.keys() and strtobool(message.raiser.header['ignore_error_check'])):
+                return
+            if(message.level == MessageLevel.WARNING and 'ignore_warning_check' in message.raiser.header.keys() and strtobool(message.raiser.header['ignore_warning_check'])):
+                return
         self.__messages.append(message)
 
     @property
@@ -130,22 +141,25 @@ class Messager(object):
         return list(filter(lambda message: message.level == level, self.messages))
 
     def raise_item_duplicated(self, msg, addition_info = '', raiser = None):
-        self.send(ScanMessage(MessageLevel.ERROR, MessageSummary.ItemDuplicated, msg, addition_info, raiser))
+        self.__send(ScanMessage(MessageLevel.ERROR, MessageSummary.ItemDuplicated, msg, addition_info, raiser))
     
     def raise_output_unmatched(self, msg, addition_info = '', raiser = None):
-        self.send(ScanMessage(MessageLevel.ERROR, MessageSummary.OutputTableNameUnmatched, msg, addition_info, raiser))
+        self.__send(ScanMessage(MessageLevel.ERROR, MessageSummary.OutputTableNameUnmatched, msg, addition_info, raiser))
     
     def raise_reference_limited(self, msg, addition_info = '', raiser = None):
-        self.send(ScanMessage(MessageLevel.ERROR, MessageSummary.ReferenceLimitationExceeded, msg, addition_info, raiser))
+        self.__send(ScanMessage(MessageLevel.ERROR, MessageSummary.ReferenceLimitationExceeded, msg, addition_info, raiser))
     
     def raise_insert_columns_unmatched_confirm(self, msg, addition_info = '', raiser = None):
-        self.send(ScanMessage(MessageLevel.ERROR, MessageSummary.InsertTableColumnUnmatched, msg, addition_info, raiser))
+        self.__send(ScanMessage(MessageLevel.ERROR, MessageSummary.InsertTableColumnUnmatched, msg, addition_info, raiser))
 
     def raise_insert_columns_unmatched_probably(self, msg, addition_info = '', raiser = None):
-        self.send(ScanMessage(MessageLevel.WARNING, MessageSummary.InsertTableColumnUnmatched, msg, addition_info, raiser))
+        self.__send(ScanMessage(MessageLevel.WARNING, MessageSummary.InsertTableColumnUnmatched, msg, addition_info, raiser))
     
+    def raiser_notify_recommend(self, msg, message_summary, addition_info = '', raiser = None):
+        self.__send(ScanMessage(MessageLevel.NOTIFY_RECOMMEND, message_summary, msg, addition_info, raiser))
+
     def save_env(self, env):
-        self.send(InfoMessage(MessageLevel.INFO, MessageSummary.Environment, env, '', None))
+        self.__send(InfoMessage(MessageLevel.INFO, MessageSummary.Environment, env, '', None))
 
     def checkout(self, output_file):
         self.__output_message(output_file, self.messages)
@@ -185,10 +199,10 @@ class Messager(object):
 
         logging.warn('============== Total: {0} error in {1} raiser{4}  |  {2} warning in {3} raiser{5} =============='.format(len(error_messages), len(error_items), len(warning_messages), len(warning_items), s_error, s_warning))
         
-        from etl.helper.module.ETL_element import ElementBase
+        from etl.helper.module.ETL_element import FileElement
         for error_item in error_items:
             raiser_name = ''
-            if(isinstance(error_item, ElementBase)):
+            if(isinstance(error_item, FileElement)):
                 raiser_name = error_item.show_name
             else:
                 raiser_name = error_item
@@ -197,12 +211,26 @@ class Messager(object):
 
         for warning_item in warning_items:
             raiser_name = ''
-            if(isinstance(warning_item, ElementBase)):
+            if(isinstance(warning_item, FileElement)):
                 raiser_name = warning_item.show_name
             else:
                 raiser_name = warning_item
 
             logging.warn('Warning: {0}-{1} ({2})'.format('/'.join([msg.summary.name for msg in raiser_warning_mapping[warning_item]]), raiser_name, len(raiser_warning_mapping_list[warning_item])))
+
+
+        # Generate notify and recommend info
+        logging.warn('======================================= Notify and recommended =======================================')
+        notify_messages = sorted(self.level_messages(MessageLevel.NOTIFY_RECOMMEND), key = lambda msg: msg.summary.value)
+        for notify_message in notify_messages:
+            raiser_name = ''
+            if(isinstance(warning_item, FileElement)):
+                raiser_name = warning_item.show_name
+            else:
+                raiser_name = warning_item
+            logging.warn('Notify: {0} - {1} : {2}'.format(notify_message.summary.name, raiser_name, notify_message.message))
+
+        logging.warn('======================================================================================================')
 
         # Generate output file
         msg_save = []
@@ -212,7 +240,7 @@ class Messager(object):
             msg = message.message
             addition_info = message.addition_info
             # logging.warning(message)
-            if(message.raiser is not None and isinstance(message.raiser, ElementBase)):
+            if(message.raiser is not None and isinstance(message.raiser, FileElement)):
                 raiser = message.raiser.path
             elif(message.raiser is not None):
                 raiser = message.raiser
@@ -234,8 +262,8 @@ if __name__ == '__main__':
     msg2 = ScanMessage(MessageLevel.WARNING, MessageSummary.OutputTableNameUnmatched, 'msg2', addition_info = 'add-msg2', raiser = '1')
     msg3 = ScanMessage(MessageLevel.ERROR, MessageSummary.InsertTableColumnUnmatched, 'msg3', addition_info = 'add-msg3', raiser = '1')
 
-    messager_get_from_instance.send(msg1)
-    messager_get_from_instance.send(msg2)
+    # messager_get_from_instance.send(msg1)
+    # messager_get_from_instance.send(msg2)
 
     messager_get_from_init.checkout('/home/sam/cheetah_etl/xxx.yml')
 

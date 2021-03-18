@@ -4,8 +4,10 @@ from functools import reduce
 from enum import Enum
 import logging
 import re
-from etl.helper.module.Messager import Messager
+from etl.helper.module.Messager import Messager, MessageSummary
 from etl.helper.module.MetaDataHelper import MetaDataHelper
+from distutils.util import strtobool
+
 
 #Throw this exception when target table wrote in SQL file unmatched file name
 # class TargetTableException(Exception):
@@ -183,7 +185,7 @@ class SQLElement(FileElement):
             sql_text_list = self.get_sentences(remove_set_segment=True)
             result = {TableType.INPUT:set(), TableType.OUTPUT:set(), 'output_sql':set()}
             for sql_single_sentence in sql_text_list :
-                meta_list = analysis(sql_single_sentence, output_name = self.output_name.upper(), path = self.path)
+                meta_list = analysis(sql_single_sentence, output_name = self.output_name.upper(), path = self.path, element = self)
                 input_table_name_list = [tableItem[1] for tableItem in meta_list if tableItem[0] == TableType.INPUT]
                 output_table_name_list = [tableItem[1] for tableItem in meta_list if tableItem[0] == TableType.OUTPUT]
                 output_sql_list = [tableItem[1] for tableItem in meta_list if tableItem[0] == 'output_sql']
@@ -232,6 +234,15 @@ class SQLElement(FileElement):
         columns_index_partition = MetaDataHelper.get_instance().partition_columns(self.output_name)
         return {'physical':columns_index_physical, 'partition':columns_index_partition}
 
+    def __get_notify_info(self):
+        msg = 'Recommend to remove it'
+        if('ignore_error_check' in self.header.keys() and strtobool(self.header['ignore_error_check'])):
+            Messager.get_instance().raiser_notify_recommend(msg, MessageSummary.Notify_ignore_error_check, raiser = self)
+        if('ignore_warning_check' in self.header.keys() and strtobool(self.header['ignore_warning_check'])):
+            Messager.get_instance().raiser_notify_recommend(msg, MessageSummary.Notify_ignore_warning_check, raiser = self)
+        if('depth_limit' in self.header.keys()):
+            Messager.get_instance().raiser_notify_recommend(msg, MessageSummary.Notify_depth_limit_identify, raiser = self)
+
     def __get_name(self):
         return self.path.split('/')[-1].replace('.hql', '')
 
@@ -239,6 +250,7 @@ class SQLElement(FileElement):
         self.__name = self.__get_name()
         meta_data = self.__get_meta_info()
         self.__check_output_table_index(meta_data['output_sql'])
+        self.__get_notify_info()
         self.__input = tuple(sorted(meta_data[TableType.INPUT]))
         self.__output = tuple(sorted(meta_data[TableType.OUTPUT]))
 
@@ -358,6 +370,7 @@ class STGElement(FileElement):
     
 
 if __name__ == '__main__' :
+    from etl.helper.module.ETL_element import SQLElement
     Messager.get_instance().save_env('QAS')
     # fileEle = FileElement('/home/sam/cheetah_etl/src/stg/ops/[mdm].[hap_prd].[hmdm_md_attr_10002].sql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl')
     # print(fileEle)
@@ -392,7 +405,7 @@ if __name__ == '__main__' :
 
     
     # sqlEle5 = SQLElement('/home/sam/cheetah_etl/src/dm/ops/fct_mbr_trf_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
-    # print(sqlEle5)
+    # print(sqlEle5)etl.
     # print(sqlEle5.get_sentences(remove_set_segment=False))
     # print(sqlEle5.input)
     # print(sqlEle5.output)
@@ -420,13 +433,13 @@ if __name__ == '__main__' :
     # print(sqlEle5.get_sentences(remove_set_segment=False))
     # print(sqlEle5.input)
     # print(sqlEle5.output)
-
-    sqlEle5 = SQLElement('/home/sam/cheetah_etl/src/ods/ops/api_cheetah_fht_fct_mbr_wx_event_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
+    sqlEle5 = SQLElement('/home/sam/cheetah_etl/src/dwd/ops/fct_trf_event_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
     # print(sqlEle5)
     # print(sqlEle5.get_sentences(remove_set_segment=False))
     # print(sqlEle5.input)
     # print(sqlEle5.output)
-    print(Messager.get_instance().messages)
+    # print(Messager.get_instance().messages)
+    Messager.get_instance().checkout('/home/sam/cheetah_etl/xxx.yml')
 
     # sqlEle5 = SQLElement('/home/sam/cheetah_etl/src/dm/ops/itn_fct_trx_mbr_life_detail_di_repurchase.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
     # print(sqlEle5)
