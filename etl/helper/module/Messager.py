@@ -224,10 +224,10 @@ class Messager(object):
         notify_messages = sorted(self.level_messages(MessageLevel.NOTIFY_RECOMMEND), key = lambda msg: msg.summary.value)
         for notify_message in notify_messages:
             raiser_name = ''
-            if(isinstance(warning_item, FileElement)):
-                raiser_name = warning_item.show_name
+            if(isinstance(notify_message.raiser, FileElement)):
+                raiser_name = notify_message.raiser.show_name
             else:
-                raiser_name = warning_item
+                raiser_name = notify_message.raiser
             logging.warn('Notify: {0} - {1} : {2}'.format(notify_message.summary.name, raiser_name, notify_message.message))
 
         logging.warn('======================================================================================================')
