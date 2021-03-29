@@ -5,9 +5,17 @@
 2. Export the workflow to YAML file
 3. Export the full workflow
 4. Export the unused element
-5. Scan ETL project with rules(generated tablename check/same layer reference count check/group by duplicated/select distinct duplicated/)
-6. JDK 1.8.0 required
-7. pyjnius==1.3.0 and PyYAML==5.3.1 required
+5. Check script output tablename should same with script name
+6. Check reference count in same layer
+7. Check group by items duplicated
+8. Check select items distinct duplicated
+9. Check insert index between script(HQL) and Hive Metadata
+10. Support different source HQL output same target table (For example: layer.abc.hql and layer.xxx_abc.hql -> table layer.abc)
+11. Click CLI support
+12. Configuration support with different environment (config in file ./config_dev.yml ./config_prd.yml ./config_qas.yml)
+13. Messager support alternative raise the exception when match an error
+14. JDK 1.8.0 required
+15. pyjnius==1.3.0 PyYAML==5.3.1 PyMySQL==0.10.0 click==7.1.2 required
 
 ## How to use:
 1. Write python script to create and use ETLScheduler instance
@@ -24,6 +32,41 @@
         # begin to scan and check with rules
         etl_scheduler.scan_and_check()
 
+        # checkout all the messages
+        etl_scheduler.checkout_messager()
+
         # generate and export the yml file into etl home on local
         etl_scheduler.generate_output_files()
-2. Run 'root_folder/run.py [etl_home] [server_etl_home] [depth_limit]' directly (All parameter is same with ETLScheduler constructor)
+        ```
+2. Run python run.py --help
+```javascript
+        Usage: run.py [OPTIONS]
+
+        Options:
+        -p, --etl_home_local TEXT   ETL home path in local  [required]
+        -P, --etl_home_server TEXT  ETL home path in server  [required]
+        -d, --depth_limit INTEGER   Reference limitation (Integer) within same layer
+                                [required]
+
+        -a, --alias_prefix TEXT     Alias prefix setting from multi source to same
+                                target (comma split)
+
+        -e, --env TEXT              Run environment value within PRD QAS DEV
+                                [required]
+
+        --help                      Show this message and exit.
+```
+3. python run.py --etl_home_local=/xxx --etl_home_server=/xxx --depth_limit=1 --alias_prefix=xxx,xxx --env=prd/dev/qas
+
+
+## HQL Header:
+
+1. -- depth_limit=[int] identify a special depth limit check in same layer
+2. -- ignore_error_check=[true/false/1/0/t/f/y/n/yes/no] identify ignore the error message or not
+3. -- ignore_warning_check=[true/false/1/0/t/f/y/n/yes/no] identify ignore the warning message or not
+
+## Message checkout:
+
+1. There is a file 'message.yml' saved in ETL project root folder to save all detail information about all messages description
+2. There are summary information should be printed on console for common used
+
