@@ -433,7 +433,7 @@ if __name__ == '__main__' :
     # print(sqlEle5.get_sentences(remove_set_segment=False))
     # print(sqlEle5.input)
     # print(sqlEle5.output)
-    sqlEle5 = SQLElement('/home/sam/cheetah_etl/src/dwd/ops/fct_trf_event_di.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
+    sqlEle5 = SQLElement('/home/sam/cheetah_etl/src/ods/ops/pos_midplat_posm01_items.hql', '/home/sam/cheetah_etl', '/home/sam/works/cheetah_etl', ['mp11', 'mp27'])
     # print(sqlEle5)
     # print(sqlEle5.get_sentences(remove_set_segment=False))
     # print(sqlEle5.input)

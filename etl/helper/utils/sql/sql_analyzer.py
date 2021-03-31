@@ -246,7 +246,7 @@ def __find_all_items_select_index(node_inputed, **kwargs):
                 partition_val_nodes = list(__search_node_with_specific_type(insert_node, tokens.TOK_PARTVAL))
                 # Append the columns with partition column if there is partition (key = 'value')
                 # Append nothing if partititon only and without partition
-                partition_val_nodes = filter(lambda partition_val_node: __node_with_specific_type_existed_only_in_child(partition_val_node, tokens.VALUE), partition_val_nodes)
+                partition_val_nodes = filter(lambda partition_val_node: __node_with_specific_type_existed_only_in_child(partition_val_node, tokens.VALUE_STR), partition_val_nodes)
                 partition_val_identify_nodes = [__search_node_with_specific_type(partition_val_node, tokens.IDENTIFY) for partition_val_node in partition_val_nodes]
                 partition_val_identify_node_list = list()
                 for partition_val_identify_node in partition_val_identify_nodes:
@@ -285,7 +285,7 @@ def __find_all_items_select_index(node_inputed, **kwargs):
                     
                     if(__node_with_specific_type_existed(insert_node, tokens.TOK_PARTVAL)):
                         partition_val_nodes = list(__search_node_with_specific_type(insert_node, tokens.TOK_PARTVAL))
-                        partition_val_nodes = filter(lambda partition_val_node: __node_with_specific_type_existed_only_in_child(partition_val_node, tokens.VALUE), partition_val_nodes)
+                        partition_val_nodes = filter(lambda partition_val_node: __node_with_specific_type_existed_only_in_child(partition_val_node, tokens.VALUE_STR), partition_val_nodes)
                         partition_val_identify_nodes = [__search_node_with_specific_type(partition_val_node, tokens.IDENTIFY) for partition_val_node in partition_val_nodes]
                         partition_val_identify_node_list = list()
                         for partition_val_identify_node in partition_val_identify_nodes:
@@ -433,8 +433,13 @@ def __check_selectdi_duplication(node_inputed, sql_input, path, element):
                                 tmp_select_distinct_column += reduce(lambda t1, t2: t1.getText() + '.' + t2.getText(), alias_select_distinct_tab_col.children) + '.'
                         else:
                             tmp_select_distinct_column += alias_select_distinct_tab_col.getText()
+                    select_distinct_s.add(tmp_select_distinct_column)
+                    break
+                elif(alias_select_distinct_child.getChildCount() == 0):
+                    tmp_select_distinct_column = alias_select_distinct_child.getText()
+                    select_distinct_s.add(tmp_select_distinct_column)
+                    break
             
-            select_distinct_s.add(tmp_select_distinct_column)
 
     if(select_distinct_input_size != len(select_distinct_s)): 
         duplication_msg = 'SQL: {0} in path: {1} duplicate inputed in {2}. There are {3} but {4} actually. They are {5}'.format(sql_input, path, node_inputed.getText(), select_distinct_input_size, len(select_distinct_s), select_distinct_s)
